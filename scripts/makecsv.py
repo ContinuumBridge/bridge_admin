@@ -26,7 +26,9 @@ class MakeCVS():
         print "Writing cvs files for ", self.bridge
 
         access_token = os.getenv('CB_DROPBOX_TOKEN', 'NO_TOKEN')
-        print "Dropbox access token = ", access_token
+        if access_token == "NO_TOKEN":
+            print "No Dropbox access token. You must set CB_DROPBOX_TOKEN environment variable first."
+            exit()
         try:
             self.client = DropboxClient(access_token)
         except:
