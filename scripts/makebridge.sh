@@ -8,5 +8,5 @@ rm -rf .git*
 rm -rf */.git*
 rm -rf lxc-scripts
 cd ~/
-tar cf bridge_clone.tar bridge_clone
+tar cfz bridge_clone.tgz bridge_clone
 echo 'bridge cloned as bridge_clone'
