@@ -10,7 +10,7 @@ import time
 def niceTime(timeStamp):
     localtime = time.localtime(timeStamp)
     milliseconds = '%03d' % int((timeStamp - int(timeStamp)) * 1000)
-    now = time.strftime('%Y:%m:%d, %H:%M:%S:', localtime) + milliseconds
+    now = time.strftime('%Y:%m:%d %H:%M:%S:', localtime) + milliseconds
     return now
 
 def matrix_to_string(matrix, header=None):

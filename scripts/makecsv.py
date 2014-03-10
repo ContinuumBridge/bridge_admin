@@ -15,6 +15,7 @@ from dropbox.datastore import DatastoreError, DatastoreManager, Date, Bytes
 from pprint import pprint
 import time
 import os, sys
+from utilities import niceTime
 
 class CheckEEW():
     def __init__(self, argv):
@@ -40,12 +41,6 @@ class CheckEEW():
         self.manager = DatastoreManager(self.client)
         self.process()
     
-    def niceTime(self, timeStamp):
-        localtime = time.localtime(timeStamp)
-        milliseconds = '%03d' % int((timeStamp - int(timeStamp)) * 1000)
-        now = time.strftime('%Y:%m:%d, %H:%M:%S:', localtime) + milliseconds
-        return now
-
     def matrix_to_string(self,matrix, header=None):
         """
         Return a pretty, aligned string representation of a nxm matrix.
@@ -100,7 +95,7 @@ class CheckEEW():
             devices = t.query(type='idtoname')
             values = []
             commas = ""
-            heads = ""
+            heads = "Time,"
             for d in devices:
                 devHandle = d.get('device')
                 devName =  d.get('name')
@@ -118,15 +113,12 @@ class CheckEEW():
                         line = commas + str("%2.1f" %dat)
                         values.append([timeStamp, line])
                     commas += ","
-                    rows.append([devHandle, devName, sensor, self.niceTime(max)])
+                    rows.append([devHandle, devName, sensor, niceTime(max)])
             values.sort(key=lambda tup: tup[0])
             self.f.write(heads + '\n')
             for v in values:
-                line = self.niceTime(v[0]) + "," + v[1] + "\n"
+                line = niceTime(v[0]) + "," + v[1] + "\n"
                 self.f.write(line)
-        #header = ('Handle', 'Friendly Name', 'Sensor', 'Most Recent Sample')
-        #txt = self.matrix_to_string(rows, header)
-        #print txt
 
 if __name__ == '__main__':
     c = CheckEEW(sys.argv)
