@@ -1,7 +1,7 @@
 #!/bin/bash
 cd ~/
 rm -rf bridge_clone
-rm bridge_clone.tar
+rm bridge_clone.tgz
 cp -r bridge bridge_clone
 cd bridge_clone
 rm -rf .git*
