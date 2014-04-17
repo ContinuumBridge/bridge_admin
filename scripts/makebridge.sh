@@ -1,4 +1,6 @@
 #!/bin/bash
+cd ~/bridge/manager
+git describe > cb_version
 cd ~/
 rm -rf bridge_clone
 rm bridge_clone.tgz
