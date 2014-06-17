@@ -31,7 +31,7 @@ dataUrl = baseUrl + 'ZWaveAPI/Data/'
 
 while not doStop:
     now = int(time.time())
-    fromTime = str(now - 5)
+    fromTime = str(now - 1)
     URL = dataUrl + fromTime
     start = time.time()
     h = httplib2.Http()
@@ -43,5 +43,5 @@ while not doStop:
     #pprint(resp)
     dat = json.loads(content)
     #pprint(dat)
-    time.sleep(0.5)
+    time.sleep(1)
 
