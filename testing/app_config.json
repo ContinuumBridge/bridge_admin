@@ -1,0 +1,8 @@
+{
+"description": "App description.",
+"exe": "app.py",
+"name": "App name",
+"provider": "ContinuumBridge",
+"url": "https://github.com/ContinuumBridge/example1_app/archive/v0.2.1.tar.gz",
+"version": "0.2.1"
+}
