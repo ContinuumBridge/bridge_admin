@@ -50,6 +50,12 @@ def epochtime(date_time):
     epoch = int(time.mktime(time.strptime(date_time, pattern)))
     return epoch
 
+def start():
+    t = time.localtime(time.time() - oneDay)
+    yesterday = time.strftime('%Y-%m-%d', t)
+    s = yesterday + " 12:00:00"
+    return epochtime(s)
+
 def activeInTenMinutes(series, time):
     for s in series:
         if s["t"] >= time and s["t"] < time + tenMinutes:
@@ -94,12 +100,11 @@ def replace(holder, value):
 @click.command()
 @click.option('--user', nargs=1, help='User name of email account.')
 @click.option('--password', prompt='Password', help='Password of email account.')
-@click.option('--start', nargs=1, help='Start time for getting time series in the format: 18-10-2014 11:05:02.')
 @click.option('--bid', nargs=1, help='The bridge ID to list.')
 @click.option('--to', nargs=1, help='The address to send the email to.')
 @click.option('--key', prompt='Geras API key', help='Your Geras API key. See http://geras.1248.io/user/apidoc.')
 
-def shc_email(user, password, start, bid, to, key):
+def shc_email(user, password, bid, to, key):
     h1 = ""
     h2 = ""
     working = ""
@@ -115,12 +120,9 @@ def shc_email(user, password, start, bid, to, key):
             if bid in t:
                 print t
                 serieslist.append(t)
-    if start:
-        startTime = epochtime(start)
-        endTime = startTime + 60 * 60 * 24
-    else:
-        print "You must give a start time with --start"
-        exit()
+    startTime = start()
+    endTime = startTime + oneDay
+    print "startTime:", nicetime(startTime), " endTime:", nicetime(endTime)
     # Read HTML file
     with open(fileName, "r") as f:
         h1 = f.read()
