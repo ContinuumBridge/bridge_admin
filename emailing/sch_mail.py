@@ -258,8 +258,12 @@ def shc_email(user, password, bid, to, key):
     msg = MIMEMultipart('alternative')
     msg['Subject'] = "Activity for bridge " + bid
     msg['From'] = "Bridges <bridges@continuumbridge.com>"
-    msg['To'] = to
-    
+    recipients = to.split(',')
+    [p.strip(' ') for p in recipients]
+    if len(recipients) == 1:
+        msg['To'] = to
+    else:
+        msg['To'] = ", ".join(recipients)
     # Create the body of the message (a plain-text and an HTML version).
     text = "Content only available with HTML email clients\n"
     # Record the MIME types of both parts - text/plain and text/html.
@@ -279,7 +283,7 @@ def shc_email(user, password, bid, to, key):
     mail.ehlo()
     mail.starttls()
     mail.login(user, password)
-    mail.sendmail(user, to, msg.as_string())
+    mail.sendmail(user, recipients, msg.as_string())
     mail.quit()
 
 if __name__ == '__main__':
