@@ -256,7 +256,7 @@ def shc_email(user, password, bid, to, key):
         htmlText = h2
     # Create message container - the correct MIME type is multipart/alternative.
     msg = MIMEMultipart('alternative')
-    msg['Subject'] = "Activity for bridge " + bid
+    msg['Subject'] = "Activity for bridge " + bid + " from " + nicedate(startTime) + " to " + nicedate(endTime)
     msg['From'] = "Bridges <bridges@continuumbridge.com>"
     recipients = to.split(',')
     [p.strip(' ') for p in recipients]
