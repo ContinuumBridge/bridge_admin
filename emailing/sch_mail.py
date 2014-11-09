@@ -5,6 +5,7 @@
 # Proprietary and confidential
 # Written by Peter Claydon
 #
+# Modified MWS 11th Nov 2014
 
 gerasurl = 'http://geras.1248.io/'
 import requests
@@ -150,23 +151,36 @@ def shc_email(user, password, bid, to, key):
             timeseries[s] = json.loads(r.content)
             series = timeseries[s]["e"]
             ss = s.split('/')
+            #print "ss1:", ss[1]
+            #print "ss2:", ss[2]      
+            #print "ss3:", ss[3]            
             if "PIR" in ss[2]:
                 ss[3] = ss[3].replace("binary", "Activity")
+            # one more case
+            if "TBK" in ss[2]:
+                ss[3] = ss[3].replace("binary", "Switch")
             ss[3] = ss[3].replace("binary", "")
             ss[2] = ss[2].replace("Fib_PIR-", "")
             ss[2] = ss[2].replace("Fib_PIR_", "")
             ss[2] = ss[2].replace("PIR_Fib-", "")
-            ss[2] = ss[2].replace("PIR_Fib_", "")
+            ss[2] = ss[2].replace("PIR_Fib_", "")            
             ss[2] = ss[2].replace("MagSW_ES-", "")
             ss[2] = ss[2].replace("MagSW_ES_", "")
             ss[2] = ss[2].replace("TBK_SW_curr-", "")
             ss[2] = ss[2].replace("TBK_SW_curr_", "")
             ss[2] = ss[2].replace("SW_TBK_curr-", "")
             ss[2] = ss[2].replace("SW_TBK_curr_", "")
-            ss[2] = ss[2].replace("_", " ")
+            # another two to get rid of
+            ss[2] = ss[2].replace("PIR_AEON-", "")
+            ss[2] = ss[2].replace("SW_TBK-", "")
+                        
+            # some hyphens were left
+            ss[2] = ss[2].replace("-", " ")
+            
+            ss[2] = ss[2].replace("_", " ")            
             ss[1] = ""
-
-            for value in (ss[1], ss[2], ss[3]):
+                     
+            for value in (ss[1], ss[2], ss[3]): 
                 holder = "S_" + str(col) + "_name" + str(ss.index(value))
                 print "holder:", holder, " value:", value
                 if working == "h1":
@@ -284,8 +298,9 @@ def shc_email(user, password, bid, to, key):
     mail.starttls()
     mail.login(user, password)
     mail.sendmail(user, recipients, msg.as_string())
+    print "Sent mail"
     mail.quit()
-
+       
 if __name__ == '__main__':
     shc_email()
 
