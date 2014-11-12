@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# cb_test.py.py
 # Copyright (C) ContinuumBridge Limited, 2014 - All Rights Reserved
 # Unauthorized copying of this file, via any medium is strictly prohibited
 # Proprietary and confidential
@@ -56,7 +55,7 @@ def logout(sessionid):
 def cb(bridge, app, adaptor, user, password):
     print "bridge:    ", bridge
     print "app:       ", app
-    print "app:       ", app[0], app[1]
+    #print "app:       ", app[0], app[1]
     print "adaptor:   ", adaptor
     print "user:      ", user
     print "password:  ", password
@@ -65,8 +64,8 @@ def cb(bridge, app, adaptor, user, password):
         sessionid = login(user, password) 
         if sessionid:
             print "Creating bridge"
-            url = "http://54.72.38.223//api/bridge/v1/bridge/"
-            data = {}
+            url = "http://54.72.38.223/api/bridge/v1/bridge/"
+            data = {"name": "myname"}
             headers = {'Content-Type': 'application/json'}
             cookies = {'sessionid': sessionid}
             r = requests.post(url, data=json.dumps(data), headers=headers, cookies=cookies)
@@ -131,6 +130,7 @@ def cb(bridge, app, adaptor, user, password):
         logout(sessionid)
         print "Logging out"
     elif app[0]  == "rm":
+        pass
 
 if __name__ == '__main__':
     cb()

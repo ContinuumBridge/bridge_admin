@@ -19,7 +19,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-class CheckEEW():
+class AnalyseData():
     def __init__(self, argv):
 	if len(argv) < 2:
             print "Usage: checkbridge <bridge>"
@@ -41,104 +41,68 @@ class CheckEEW():
             exit()
         
         self.manager = DatastoreManager(self.client)
-        self.process()
     
     def niceTime(self, timeStamp):
         localtime = time.localtime(timeStamp)
         milliseconds = '%03d' % int((timeStamp - int(timeStamp)) * 1000)
         now = time.strftime('%Y:%m:%d, %H:%M:%S:', localtime) + milliseconds
         return now
-
-    def matrix_to_string(self,matrix, header=None):
-        """
-        Return a pretty, aligned string representation of a nxm matrix.
-    
-        This representation can be used to print any tabular data, such as
-        database results. It works by scanning the lengths of each element
-        in each column, and determining the format string dynamically.
-    
-        @param matrix: Matrix representation (list with n rows of m elements).
-        @param header: Optional tuple or list with header elements to be displayed.
-        """
-        if type(header) is list:
-            header = tuple(header)
-        lengths = []
-        if header:
-            for column in header:
-                lengths.append(len(column))
-        for row in matrix:
-            for column in row:
-                i = row.index(column)
-                column = str(column)
-                cl = len(column)
-                try:
-                    ml = lengths[i]
-                    if cl > ml:
-                        lengths[i] = cl
-                except IndexError:
-                    lengths.append(cl)
-    
-        lengths = tuple(lengths)
-        format_string = ""
-        for length in lengths:
-            format_string += "%-" + str(length) + "s "
-        format_string += "\n"
-    
-        matrix_str = ""
-        if header:
-            matrix_str += format_string % header
-        for row in matrix:
-            matrix_str += format_string % tuple(row)
-    
-        return matrix_str
-    
-    def process(self):
+   
+    def readData(self):
         for bridge in self.bridges:
             print "Reaading and processing data for ", bridge
-            fileName = bridge + ".csv"
-            self.f = open(fileName, "w", 0)
-            rows = []
             ds = self.manager.open_or_create_datastore(bridge)
             t = ds.get_table('config')
             devices = t.query(type='idtoname')
-            values = []
-            commas = ""
-            heads = ""
+            self.values = []
             devSensors = []
             for d in devices:
                 devHandle = d.get('device')
                 devName =  d.get('name')
-                self.f.write(devHandle + ',' +  devName + '\n')
                 t = ds.get_table(devHandle)
                 for sensor in SENSORS:
-                    heads = heads + devName + ' ' + sensor + ','
                     devSensors.append([devName, sensor])
                     readings = t.query(Type=sensor)
-                    max = 0
                     for r in readings:
                         timeStamp = float(r.get('Date'))
-                        if timeStamp > max:
-                            max = timeStamp
                         dat = r.get('Data')
-                        line = commas + str("%2.1f" %dat)
-                        values.append([timeStamp, line])
-                    commas += ","
-                    rows.append([devHandle, devName, sensor, self.niceTime(max)])
-            values.sort(key=lambda tup: tup[0])
+                        self.values.append([timeStamp, dat])
 
-            print "Type the numbers of the values you want to plot, separated by spaces:"
-            for d in devSensors:
-                print  devSensors.index(d) + 1, ":", d[0], d[1]
-            request = raw_input("Values > ")
-            toProcess = request.split()
-            print "toProcess: ", toProcess
-            #self.f.write(heads + '\n')
-            #for v in values:
-                #line = self.niceTime(v[0]) + "," + v[1] + "\n"
-                #self.f.write(line)
-        #header = ('Handle', 'Friendly Name', 'Sensor', 'Most Recent Sample')
-        #txt = self.matrix_to_string(rows, header)
-        #print txt
+    def prepareData(self):
+        self.df = {}
+        test = pd.to_datetime([1, 2, 3])
+        print "test = ", test
+        self.df = pd.DataFrame(self.values)
+        #self.df[t]['epochTime'] = pd.to_datetime(self.df[t]['epochTime'], unit='s')
+        #self.df[t] = self.df[t].set_index('epochTime')
+        #print self.df[t].head()
+
+    def processTemp(self):
+        self.temp = {}
+        for t in self.tables:
+            print "processTemp, table = ", t
+            self.temp[t] = self.df[t]['ambT']
+            #print objT.head()
+            print "Mean = ", self.temp[t].mean()
+            self.temp[t] = self.temp[t].resample('10Min')
+            #print objT.head()
+            #objT = objT.cumsum()
+            #objT.plot()
+            #objT = objT.cumsum()
+            #plt.figure(); df.plot(); plt.legend(loc='best')
+            #plt.plot(objT)
+            self.temp[t].plot()
+        plt.ylabel('deg C')
+        plt.show(block=False)
 
 if __name__ == '__main__':
-    c = CheckEEW(sys.argv)
+    print "Hello"
+    if len(sys.argv) < 2:
+        print "App improper usage"
+    a = AnalyseData(sys.argv)
+    a.readData()
+    a.prepareData()
+    a.processTemp()
+    # Wait for user input before closing all windows and finishing:
+    cmd = raw_input("Press return to finish ...")
+    print "Bye"
