@@ -9,7 +9,8 @@ The cb command allows a user to create and modify bridges, app and devices.
 """
 
 THISBRIDGE = "/opt/cbridge/thisbridge/thisbridge.sh"
-ADDRESS = "http://54.72.38.223"
+ADDRESS = "http://staging.continuumbridge.com"
+#ADDRESS = "http://54.72.38.223"
 #ADDRESS = "http://54.76.145.70"
 import requests
 from requests.auth import HTTPBasicAuth
