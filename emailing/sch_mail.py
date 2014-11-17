@@ -114,8 +114,13 @@ def shc_email(user, password, bid, to, key):
         exit()
     else:
         print "Requesting list"
-        r = requests.get('http://geras.1248.io/serieslist', auth=(key,''))
-        allseries = json.loads(r.content)
+        try:
+            r = requests.get('http://geras.1248.io/serieslist', auth=(key,''))
+            allseries = json.loads(r.content)
+        except Exception as inst:
+            logging.warning("%s Failed to get list of time series", ModuleName)
+            logging.warning("%s Exception: %s %s", ModuleName, type(inst), str(inst.args))
+            exit()
         serieslist = []
         for t in allseries:
             if bid in t:

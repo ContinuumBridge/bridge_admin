@@ -1,13 +1,7 @@
-node_modules/
-aggregator/node-modules
-build
-manager/*.db
-manager/*.config
 *.py[cod]
-thisbridge/*
-<<<<<<< HEAD
 *.csv
 *.swp
+*.log
 
 # C extensions
 *.so
