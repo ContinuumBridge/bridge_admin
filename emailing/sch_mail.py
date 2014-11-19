@@ -149,16 +149,14 @@ def shc_email(user, password, bid, to, key):
     timeseries = {}
     col = 1
     for s in serieslist:
-        if not("battery" in s or "connected" in s or "luminance" in s or ("binary" and "kettle" in s.lower())):
+        if not("battery" in s or "connected" in s or "luminance" in s): # or ("binary" and "kettle" in s.lower())): we keep losing kettles!
             url = gerasurl + 'series/' + s +'?start=' + str(startTime) + '&end=' + str(endTime)
             print "url:", url
             r = requests.get(url, auth=(key,''))
             timeseries[s] = json.loads(r.content)
             series = timeseries[s]["e"]
             ss = s.split('/')
-            #print "ss1:", ss[1]
-            #print "ss2:", ss[2]      
-            #print "ss3:", ss[3]            
+
             if "PIR" in ss[2]:
                 ss[3] = ss[3].replace("binary", "Activity")
             # one more case
@@ -273,6 +271,7 @@ def shc_email(user, password, bid, to, key):
         htmlText = h1
     else:
         htmlText = h2
+    
     # Create message container - the correct MIME type is multipart/alternative.
     msg = MIMEMultipart('alternative')
     msg['Subject'] = "Activity for bridge " + bid + " from " + nicedate(startTime) + " to " + nicedate(endTime)

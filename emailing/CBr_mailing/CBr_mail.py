@@ -104,7 +104,7 @@ def replace(holder, value):
 @click.option('--to', nargs=1, help='The address to send the email to.')
 @click.option('--key', prompt='Geras API key', help='Your Geras API key. See http://geras.1248.io/user/apidoc.')
 
-def shc_email(user, password, bid, to, key):
+def cbr_email(user, password, bid, to, key):
     h1 = ""
     h2 = ""
     working = ""
@@ -142,56 +142,90 @@ def shc_email(user, password, bid, to, key):
 
     timeseries = {}
     col = 1
-    for s in serieslist:
-        if not("battery" in s or "connected" in s or "luminance" in s ): #or ("binary" and "kettle" in s.lower())):
-            url = gerasurl + 'series/' + s +'?start=' + str(startTime) + '&end=' + str(endTime)
+    for gerasPath in serieslist:
+        if not("battery" in gerasPath or "connected" in gerasPath or "luminance" in gerasPath): # or ("binary" and ("pir" or "mag") in gerasPath.lower())):
+            url = gerasurl + 'series/' + gerasPath +'?start=' + str(startTime) + '&end=' + str(endTime)
             #print "\nurl:", url
             r = requests.get(url, auth=(key,''))
-            timeseries[s] = json.loads(r.content)
+            timeseries[gerasPath] = json.loads(r.content)
 
-            # what's the ["e"] for?
-            series = timeseries[s]["e"]
-            
-            # split it into BID, Name, Type
-            ss = re.split('\W+|/|-',s)
-            #ss = s.split('/')
-            print "First ss:",ss
-                                                           
+            series = timeseries[gerasPath]["e"]
+
+            # split it into BID, Name, Type (_ is a sledgehammer - see below)
+            #ss = re.split('\W+|/|-|_',gerasPath)
+            ss = re.split('\W+|/|-',gerasPath)            
+            #print "First ss:",ss
+
             # Change some "types" according to sensor type
             length = len(ss)
             for i in range(0,len(ss)):
                 if "pir" in ss[i].lower():
                     ss[length-1] = ss[length-1].replace("binary", "Activity")
                 if "tbk" in ss[i].lower():
-                    ss[length-1] = ss[length-1].replace("binary", "Switch")
-                if "magsw" in ss[i].lower(): 
-                    ss[length-1] = ss[length-1].replace("binary", "Open")
-            print "What's left?:",ss
+                    ss[length-1] = ss[length-1].replace("binary", "Switch")           
+                            
+            """
+            # having removed all _ get rid of mis-named things pending geras series concatenation
+            if "ES" in ss:                                               
+                del ss[ss.index("ES")]
+            if "MagSW" in ss:
+                del ss[ss.index("MagSW")]            
+            if "Fib" in ss:
+                del ss[ss.index("Fib")]            
+            if "AEON" in ss:
+                del ss[ss.index("AEON")]            
+            if "TBK" in ss:
+                del ss[ss.index("TBK")]             
+            if "curr" in ss:
+                del ss[ss.index("curr")]            
+            if "PIR" in ss:
+                del ss[ss.index("PIR")]            
+            if "SW" in ss:
+                del ss[ss.index("SW")]
+            if "C" in ss:
+                del ss[ss.index("C")]  
+            """                                      
+            if "binary" in ss:
+                del ss[ss.index("binary")]            
+            # get rid of blank field, BID & sensor type unless it's a KM
+            if "KM" in ss:
+                del ss[0:2]
+            else:
+                del ss[0:3]
+            #print "What's left?:",ss            
+               
+            # squash it down to three lines for the template
+            if len(ss) > 4:
+                ss[0] = ss[0] + " " + ss[1]
+                del ss[1]
+                ss[1] = ss[1] + " " + ss[2]
+                del ss[2]
+            elif len(ss) > 3:                
+                ss[1] = ss[1] + " " + ss[2]
+                del ss[2]
                         
-            del ss[0:3]            
-
             # There are four possible fields plus the type. 
             # And there should only be underscores left
             for i in range(0,len(ss)):
-                ss[i] = ss[i].replace("_", " ")            
-            print "More names?:",ss,"\n"
-            
+                ss[i] = ss[i].replace("_", " ")
+                #print "ss[",i,"]:", ss[i], "\n"            
+            #print "What's left?:",ss            
 
-        """
-        for value in (ss[0], ss[1], ss[2]): 
-            holder = "S_" + str(col) + "_name" + str(ss.index(value))
-            print "holder:", holder, " value:", value
-            if working == "h1":
-                h2 = h1.replace(holder, value)
-                working = "h2"
-            else:
-                h1 = h2.replace(holder, value)
-                working = "h1"
+            for value in ss[0:len(ss)]:
+                holder = "S_" + str(col) + "_name" + str(ss.index(value)+1)
+                print "holder:", holder, " value:", value
+                if working == "h1":
+                    h2 = h1.replace(holder, value)
+                    working = "h2"
+                else:
+                    h1 = h2.replace(holder, value)
+                    working = "h1"
+
             
-            if series and ((("door" in s.lower() and "magsw" in s.lower()) or "cupboard" in s.lower()) and "binary" in s.lower()):
+            # build table entries
+            if series and "magsw" in gerasPath.lower():  # Always on doors & drawers for now
                 for stepTime in range(startTime, startTime + oneDay, tenMinutes):
                     holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
-                    #print "stepTime:", nicetime(stepTime), " holder:", holder
                     if activeInTenMinutes(series, stepTime):
                         value = "Open"
                     else:
@@ -202,7 +236,7 @@ def shc_email(user, password, bid, to, key):
                     else:
                         h1 = h2.replace(holder, value)
                         working = "h1"
-            elif series and "power" in s.lower():
+            elif series and "power" in gerasPath.lower():
                 for stepTime in range(startTime, startTime + oneDay, tenMinutes):
                     holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
                     if powerInTenMinutes(series, stepTime):
@@ -215,7 +249,7 @@ def shc_email(user, password, bid, to, key):
                     else:
                         h1 = h2.replace(holder, value)
                         working = "h1"
-            elif series and "temperature" in s.lower():
+            elif series and "temperature" in gerasPath.lower():
                 prev_temperature = "none"
                 for stepTime in range(startTime, startTime + oneDay, tenMinutes):
                     holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
@@ -231,7 +265,7 @@ def shc_email(user, password, bid, to, key):
                     else:
                         h1 = h2.replace(holder, value)
                         working = "h1"
-            elif series and "pir" in s.lower() and "binary" in s.lower():
+            elif series and "pir" in gerasPath.lower() and "binary" in gerasPath.lower():
                 for stepTime in range(startTime, startTime + oneDay, tenMinutes):
                     holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
                     if activeInTenMinutes(series, stepTime):
@@ -254,9 +288,10 @@ def shc_email(user, password, bid, to, key):
                     else:
                         h1 = h2.replace(holder, value)
                         working = "h1"
+            print "\n"
             col += 1
-            """
             
+
     # Remove any unused holders
     if working == "h1":
         h2 = re.sub("S_[0-9]+_name[0-9]+", "", h1, 0)
@@ -268,7 +303,8 @@ def shc_email(user, password, bid, to, key):
         htmlText = h1
     else:
         htmlText = h2
-    """
+
+        
     # Create message container - the correct MIME type is multipart/alternative.
     msg = MIMEMultipart('alternative')
     msg['Subject'] = "Activity for bridge " + bid + " from " + nicedate(startTime) + " to " + nicedate(endTime)
@@ -289,18 +325,17 @@ def shc_email(user, password, bid, to, key):
     msgImage = MIMEImage(fp.read())
     fp.close()
     # Define the image's ID as referenced above
-    #msgImage.add_header('Content-ID', '<image001.png>')
-    #msg.attach(msgImage)
-    #msg.attach(part1)
-    #msg.attach(part2)
-    #mail = smtplib.SMTP('smtp.gmail.com', 587)
-    #mail.ehlo()
-    #mail.starttls()
-    #mail.login(user, password)
-    #mail.sendmail(user, recipients, msg.as_string())
-    #mail.quit()
-    """
-           
+    msgImage.add_header('Content-ID', '<image001.png>')
+    msg.attach(msgImage)
+    msg.attach(part1)
+    msg.attach(part2)
+    mail = smtplib.SMTP('smtp.gmail.com', 587)
+    mail.ehlo()
+    mail.starttls()
+    mail.login(user, password)
+    mail.sendmail(user, recipients, msg.as_string())
+    mail.quit()
+              
 if __name__ == '__main__':
-    shc_email()
+    cbr_email()
 
