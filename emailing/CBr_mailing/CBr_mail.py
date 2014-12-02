@@ -143,7 +143,10 @@ def cbr_email(user, password, bid, to, key):
     timeseries = {}
     col = 1
     for gerasPath in serieslist:
-        if not("battery" in gerasPath or "connected" in gerasPath or "luminance" in gerasPath): # or ("binary" and ("pir" or "mag") in gerasPath.lower())):
+        if not("Mesh" in gerasPath or "battery" in gerasPath or "connected" in gerasPath or "luminance" in gerasPath or 
+        ("binary" in gerasPath.lower() and "kettle" in gerasPath.lower()) or 
+        ("binary" in gerasPath.lower() and "coffee" in gerasPath.lower())):        
+                    
             url = gerasurl + 'series/' + gerasPath +'?start=' + str(startTime) + '&end=' + str(endTime)
             #print "\nurl:", url
             r = requests.get(url, auth=(key,''))
@@ -164,35 +167,16 @@ def cbr_email(user, password, bid, to, key):
                 if "tbk" in ss[i].lower():
                     ss[length-1] = ss[length-1].replace("binary", "Switch")           
                             
-            """
-            # having removed all _ get rid of mis-named things pending geras series concatenation
-            if "ES" in ss:                                               
-                del ss[ss.index("ES")]
-            if "MagSW" in ss:
-                del ss[ss.index("MagSW")]            
-            if "Fib" in ss:
-                del ss[ss.index("Fib")]            
-            if "AEON" in ss:
-                del ss[ss.index("AEON")]            
-            if "TBK" in ss:
-                del ss[ss.index("TBK")]             
-            if "curr" in ss:
-                del ss[ss.index("curr")]            
-            if "PIR" in ss:
-                del ss[ss.index("PIR")]            
-            if "SW" in ss:
-                del ss[ss.index("SW")]
-            if "C" in ss:
-                del ss[ss.index("C")]  
-            """                                      
             if "binary" in ss:
-                del ss[ss.index("binary")]            
+                if "Kettle" or "Door" in ss: 
+                    del ss[ss.index("binary")]            
+            #print "What's left?:",ss            
+            
             # get rid of blank field, BID & sensor type unless it's a KM
             if "KM" in ss:
                 del ss[0:2]
             else:
                 del ss[0:3]
-            #print "What's left?:",ss            
                
             # squash it down to three lines for the template
             if len(ss) > 4:
@@ -209,7 +193,7 @@ def cbr_email(user, password, bid, to, key):
             for i in range(0,len(ss)):
                 ss[i] = ss[i].replace("_", " ")
                 #print "ss[",i,"]:", ss[i], "\n"            
-            #print "What's left?:",ss            
+            #print "What's left now?:",ss            
 
             for value in ss[0:len(ss)]:
                 holder = "S_" + str(col) + "_name" + str(ss.index(value)+1)
@@ -305,6 +289,8 @@ def cbr_email(user, password, bid, to, key):
         htmlText = h2
 
         
+    
+    
     # Create message container - the correct MIME type is multipart/alternative.
     msg = MIMEMultipart('alternative')
     msg['Subject'] = "Activity for bridge " + bid + " from " + nicedate(startTime) + " to " + nicedate(endTime)
