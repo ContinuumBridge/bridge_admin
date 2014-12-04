@@ -44,7 +44,7 @@ def backup_geras(key, dir):
     for s in bidlist:
         url = 'http://geras.1248.io/series?pattern=%2F'+ s +'%2F%23'
         print "Getting:", url
-        #r = requests.get(url, auth=('ea2f0e06ff8123b7f46f77a3a451731a',''))
+        r = requests.get(url, auth=('ea2f0e06ff8123b7f46f77a3a451731a',''))
         alldata = json.loads(r.content)    
         #print (json.dumps(alldata, indent=4))
         f = dir + "/" + now + s + ".txt"
