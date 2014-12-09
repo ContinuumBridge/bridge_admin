@@ -50,7 +50,8 @@ def merge_geras(s1, s2, sout, key):
     if ip == "n": 
         exit()
 
-    series1.extend(series2)
+    if s2:
+        series1.extend(series2)
 
     # Make sure it gets written to the new geras path
     for i in range(0,len(series1)):
@@ -97,7 +98,9 @@ def merge_geras(s1, s2, sout, key):
         print "Now remember to delete", s2
     elif s2 and s1 and s2 == sout:
         print "Now remember to delete", s1
-            
+    elif not s2:
+        print "Now remember to delete", s1
+                    
 if __name__ == '__main__':
     merge_geras()
 
