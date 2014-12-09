@@ -67,7 +67,7 @@ def merge_geras(s1, s2, sout, key):
     headers = {'Content-Type': 'application/json'}
     status = 0
     print "Sending series to: http://geras.1248.io/series/",sout, len(series1), "items" 
-    #r = requests.post('http://geras.1248.io/series/', auth=(key, ''), data=json.dumps({"e": series1}), headers=headers)
+    r = requests.post('http://geras.1248.io/series/', auth=(key, ''), data=json.dumps({"e": series1}), headers=headers)
     status = r.status_code
     if status !=200:
         print "POSTing failed, status: ", status
