@@ -143,12 +143,13 @@ def cbr_email(user, password, bid, to, key):
     timeseries = {}
     col = 1
     for gerasPath in serieslist:
-        if not("Mesh" in gerasPath or "battery" in gerasPath or "connected" in gerasPath or "luminance" in gerasPath or 
-        ("binary" in gerasPath.lower() and "kettle" in gerasPath.lower()) or 
-        ("binary" in gerasPath.lower() and "coffee" in gerasPath.lower())):        
+        if not("Mesh" in gerasPath or "battery" in gerasPath or "connected" in gerasPath or "luminance" in gerasPath):# or 
+#        ("binary" in gerasPath.lower() and "kettle" in gerasPath.lower()) or 
+#        ("binary" in gerasPath.lower() and "coffee" in gerasPath.lower()) or        
+#        ("binary" in gerasPath.lower() and "coffee_cupboard" in gerasPath.lower())):                
                     
             url = gerasurl + 'series/' + gerasPath +'?start=' + str(startTime) + '&end=' + str(endTime)
-            #print "\nurl:", url
+            print "\nurl:", url
             r = requests.get(url, auth=(key,''))
             timeseries[gerasPath] = json.loads(r.content)
 
@@ -157,7 +158,7 @@ def cbr_email(user, password, bid, to, key):
             # split it into BID, Name, Type (_ is a sledgehammer - see below)
             #ss = re.split('\W+|/|-|_',gerasPath)
             ss = re.split('\W+|/|-',gerasPath)            
-            #print "First ss:",ss
+            print "First ss:",ss
 
             # Change some "types" according to sensor type
             length = len(ss)
@@ -289,6 +290,7 @@ def cbr_email(user, password, bid, to, key):
         htmlText = h2
 
         
+    
     
     
     # Create message container - the correct MIME type is multipart/alternative.
