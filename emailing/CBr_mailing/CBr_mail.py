@@ -117,7 +117,7 @@ def cbr_email(user, password, bid, to, key):
         allseries = json.loads(r.content)
         serieslist = []
         for t in allseries:
-            if bid in t:
+            if (bid+"/") in t:
                 print t
                 serieslist.append(t)
     startTime = start()
@@ -143,13 +143,13 @@ def cbr_email(user, password, bid, to, key):
     timeseries = {}
     col = 1
     for gerasPath in serieslist:
-        if not("Mesh" in gerasPath or "battery" in gerasPath or "connected" in gerasPath or "luminance" in gerasPath):# or 
-#        ("binary" in gerasPath.lower() and "kettle" in gerasPath.lower()) or 
+        if not("Mesh" in gerasPath or "battery" in gerasPath or "connected" in gerasPath or "luminance" in gerasPath or "magnet" in gerasPath or "button" in gerasPath or "ir_temperature" in gerasPath or ("tag_ti" in gerasPath.lower() and "temperature" in gerasPath)):
+        
 #        ("binary" in gerasPath.lower() and "coffee" in gerasPath.lower()) or        
 #        ("binary" in gerasPath.lower() and "coffee_cupboard" in gerasPath.lower())):                
                     
             url = gerasurl + 'series/' + gerasPath +'?start=' + str(startTime) + '&end=' + str(endTime)
-            print "\nurl:", url
+            #print "\nurl:", url
             r = requests.get(url, auth=(key,''))
             timeseries[gerasPath] = json.loads(r.content)
 
