@@ -173,6 +173,7 @@ def shc_email(user, password, bid, to, key):
             ss[2] = ss[2].replace("TBK_SW_curr_", "")
             ss[2] = ss[2].replace("SW_TBK_curr-", "")
             ss[2] = ss[2].replace("SW_TBK_curr_", "")
+            ss[2] = ss[2].replace("Tag", "")            
             # another two to get rid of
             ss[2] = ss[2].replace("PIR_AEON-", "")
             ss[2] = ss[2].replace("SW_TBK-", "")
