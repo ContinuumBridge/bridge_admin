@@ -66,7 +66,7 @@ def activeInTenMinutes(series, time):
 def powerInTenMinutes(series, time):
     for s in series:
         if s["t"] >= time and s["t"] < time + tenMinutes:
-            if s["v"] > 10:
+            if s["v"] > 2.5:
                 return True
     return False
 
@@ -149,7 +149,7 @@ def shc_email(user, password, bid, to, key):
     timeseries = {}
     col = 1
     for s in serieslist:
-        if not("battery" in s or "connected" in s or "luminance" in s): # or ("binary" and "kettle" in s.lower())): we keep losing kettles!
+        if not("magnet_y" in s or "magnet_z" in s or "battery" in s or "connected" in s or "luminance" in s): # or ("binary" and "kettle" in s.lower())): we keep losing kettles!
             url = gerasurl + 'series/' + s +'?start=' + str(startTime) + '&end=' + str(endTime)
             print "url:", url
             r = requests.get(url, auth=(key,''))
@@ -159,6 +159,8 @@ def shc_email(user, password, bid, to, key):
 
             if "PIR" in ss[2]:
                 ss[3] = ss[3].replace("binary", "Activity")
+            if "magnet" in ss[3]:
+                ss[3] = ss[3].replace("magnet_x", "Movement")
             # one more case
             if "TBK" in ss[2]:
                 ss[3] = ss[3].replace("binary", "Switch")
@@ -249,6 +251,19 @@ def shc_email(user, password, bid, to, key):
                     else:
                         h1 = h2.replace(holder, value)
                         working = "h1"
+            elif series and "magnet" in s.lower():
+                for stepTime in range(startTime, startTime + oneDay, tenMinutes):
+                    holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
+                    if activeInTenMinutes(series, stepTime):
+                        value = "Moved"
+                    else:
+                        value = ""                        
+                    if working == "h1":
+                        h2 = h1.replace(holder, value)
+                        working = "h2"
+                    else:
+                        h1 = h2.replace(holder, value)
+                        working = "h1"            
             else:
                 for stepTime in range(startTime, startTime + oneDay, tenMinutes):
                     holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
