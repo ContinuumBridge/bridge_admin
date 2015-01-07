@@ -10,6 +10,7 @@ rm -rf .git*
 rm -rf */.git*
 rm -rf lxc-scripts
 rm */*_a.py
+rm lib/cbcommslib.py
 cd ~/
 tar cfz bridge_clone.tar.gz bridge_clone
 echo 'bridge cloned as bridge_clone'
