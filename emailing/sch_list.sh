@@ -27,4 +27,6 @@ date
 ./CBr_mail.py --user bridges@continuumbridge.com --password cbridgest00f@r --key c685297d8c0f710e3bd1c8e771eb8d3d --bid BID49 --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com"
 date
 ./CBr_mail.py --user bridges@continuumbridge.com --password cbridgest00f@r --key c685297d8c0f710e3bd1c8e771eb8d3d --bid BID53 --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com"
+date
+./CBr_mail.py --user bridges@continuumbridge.com --password cbridgest00f@r --key c685297d8c0f710e3bd1c8e771eb8d3d --bid BID66 --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com, Praminda.Caleb-solly@uwe.ac.uk, Amalia.Tsanaka@uwe.ac.uk"
 
