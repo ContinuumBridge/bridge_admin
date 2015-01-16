@@ -6,6 +6,8 @@
 cd /home/bridge/bridge_admin/emailing
 # Sirona
 date
+./sch_mail.py --user bridges@continuumbridge.com --password cbridgest00f@r --key b9b0c3fea6308127164de1616cb97723 --bid BID44 --to "peter.claydon@continuumbridge.com, martin.sotheran@continuumbridge.com"
+date
 ./sch_mail.py --user bridges@continuumbridge.com --password cbridgest00f@r --key b9b0c3fea6308127164de1616cb97723 --bid BID36 --to "peter.claydon@continuumbridge.com, martin.sotheran@continuumbridge.com, martyn.price@sirona-cic.org.uk"
 date
 ./sch_mail.py --user bridges@continuumbridge.com --password cbridgest00f@r --key b9b0c3fea6308127164de1616cb97723 --bid BID45 --to "peter.claydon@continuumbridge.com, martin.sotheran@continuumbridge.com"
