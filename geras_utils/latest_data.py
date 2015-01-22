@@ -28,13 +28,25 @@ def epochtime(date_time):
 
 @click.command()
 @click.option('--key', prompt='Geras API key', help='Your Geras API key. See http://geras.1248.io/user/apidoc.')
+@click.option('--bid', nargs=1, help='The bridge ID to check.')
 
-def latest_data (key):
+def latest_data (key, bid):
+    allBridges = 0
+    if not bid:
+        print "No BID specified - checking all"
+        allBridges = 1
+    
     r = requests.get('http://geras.1248.io/serieslist', auth=(key,''))
     allseries = json.loads(r.content)
     serieslist = []
-    for t in allseries:
-        serieslist.append(t)
+    if allBridges:
+        for t in allseries:
+            serieslist.append(t)
+    else:
+        for t in allseries:
+            if (bid+"/") in t:
+                serieslist.append(t)
+
 
     b = {}
     oneDay = 60*60*24
@@ -64,6 +76,8 @@ def latest_data (key):
         r = requests.get(url, auth=(key,''))
         b = json.loads(r.content)        
         b1 = b["e"][0]
+        if allBridges == 0:
+            print nicetime(float(b1['t'])), "is latest data for", s 
         if b1['t'] > latest:
             latest = b1['t']
             #print "updated latest for", ss[1], "to", nicetime(float(b1['t']))
