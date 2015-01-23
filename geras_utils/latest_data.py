@@ -76,8 +76,13 @@ def latest_data (key, bid):
         r = requests.get(url, auth=(key,''))
         b = json.loads(r.content)        
         b1 = b["e"][0]
+        days_since_seen = (now - int(float(b1['t'])))/oneDay
         if allBridges == 0:
-            print nicetime(float(b1['t'])), "is latest data for", s 
+            if days_since_seen ==0:
+                print nicetime(float(b1['t'])), "( ", days_since_seen, "days ago) is latest data for", s 
+            else:
+                print nicetime(float(b1['t'])), "(*", days_since_seen, "days ago) is latest data for", s 
+
         if b1['t'] > latest:
             latest = b1['t']
             #print "updated latest for", ss[1], "to", nicetime(float(b1['t']))
