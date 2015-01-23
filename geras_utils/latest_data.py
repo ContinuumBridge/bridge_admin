@@ -62,13 +62,17 @@ def latest_data (key, bid):
             age = now - int(float(latest))
             if last_ss <> 0:
                 if age > 2*7*oneDay: 
-                    print "****", last_ss, "not heard from since:", nicetime(float(latest)), "**** more than two weeks"
+                    print "****", last_ss, "not heard from since:", nicetime(float(latest)), "****", age/oneDay,"days"
                 elif age > 7*oneDay: 
-                    print "*** ", last_ss, "not heard from since:", nicetime(float(latest)), "***  more than a week"          
+                    print "*** ", last_ss, "not heard from since:", nicetime(float(latest)), "*** ", age/oneDay,"days"          
                 elif age > oneDay/2: # shoud get a couple of battery values in 12hrs
                     print "**  ", last_ss, "not heard from since:", nicetime(float(latest)), "**   more than 12 hours <-- probably the ones to check"          
-                #else:
-                    #print "    ", last_ss, "heard from today", nicetime(float(latest))
+                else:
+                    print "    ", last_ss, "heard from today"
+                    print "skipping", last_ss
+                    last_ss = ss[1]
+                    latest = 0
+                    continue 
             last_ss = ss[1]
             latest = 0
 
