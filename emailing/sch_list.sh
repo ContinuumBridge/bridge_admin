@@ -22,8 +22,8 @@ date
 ./CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --key c685297d8c0f710e3bd1c8e771eb8d3d --bid BID11 --to martin.sotheran@continuumbridge.com
 date
 ./CBr_mailBW.py --user bridges@continuumbridge.com --password Mucht00f@r --key c685297d8c0f710e3bd1c8e771eb8d3d --bid BID12 --to "carson.bradbury@continuumbridge.com, martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com"
-date
-./CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --key c685297d8c0f710e3bd1c8e771eb8d3d --bid BID22 --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com"
+#date
+#./CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --key c685297d8c0f710e3bd1c8e771eb8d3d --bid BID22 --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com"
 date
 ./CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --key c685297d8c0f710e3bd1c8e771eb8d3d --bid BID49 --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com"
 date
