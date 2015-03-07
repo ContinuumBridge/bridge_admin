@@ -10,17 +10,17 @@ from twisted.internet import defer
 from twisted.internet import reactor
 
 # Production
-CB_ADDRESS          = "portal.continuumbridge.com"
-KEY                 = "9c577319iv/cKYwWlxuy5K9gmX6MKL1FzKtibhtiCUp3pWzwmm2C8Q8jRXBGkjz0"
+#CB_ADDRESS          = "portal.continuumbridge.com"
+#KEY                 = "2de18eaaCmNW4fCgTiSo5npqXsKNWM9WXLfgsnQghO5QgCHBzcXCd0efQToS8gma"
 # Staging service test
-#CB_ADDRESS          = "staging.continuumbridge.com"
-#KEY                 = "649e038do23icDEnfrtxf0BRCbLw9exPIyTDKSxJtm8EGm10jG4vMjUFRZqLmbfE"
+CB_ADDRESS          = "staging.continuumbridge.com"
+KEY                 = "649e038do23icDEnfrtxf0BRCbLw9exPIyTDKSxJtm8EGm10jG4vMjUFRZqLmbfE"
 START_DELAY         = 60
 SWITCH_INTERVAL     = 60
 # Staging:
-#DESTINATION         = "BID56/AID29"
+DESTINATION         = "BID84/AID29"
 # Production
-DESTINATION         = "BID52/AID12"
+#DESTINATION         = "BID27/AID12"
 
 class Connection(object):
     def __init__(self):
