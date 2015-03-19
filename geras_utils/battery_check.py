@@ -76,7 +76,10 @@ def battery_check (bid, key):
             print "****Warning", bat1['n'], "(", bat1['v'],"%) not heard from for", age, "days"                 
         elif (now - int(float(bat1['t'])) > oneDay):
             print "**  Warning", bat1['n'], "(", bat1['v'],"%) not heard from for", age, "days"
-        if int(float(bat1['v'])) < 80: 
+        else:
+            print "           ", bat1['n'], "(", bat1['v'],"%) heard from", age, "days ago"
+        
+        if int(float(bat1['v'])) < 80 and int(float(bat1['v'])) > 0: 
             #print bat1['n'], "=", bat1['v'],"% reported at", nicetime(float(bat1['t']))
             checkList.append(gerasPath)
 
@@ -117,7 +120,7 @@ def battery_check (bid, key):
             print "  Ignoring as there are less than 2 data points. It was", series[-1]['v'], "% at", nicetime(float(series[-1]['t']))
             continue      
         if series[-1]['v'] < 5:
-            print "  Ignoring as the battery's already dead (special case for BID8 AEON!)"
+            print "  Ignoring as the battery's already dead"
             continue              
         if min_bat_index <= max_bat_index:
             print "   min_bat occurs at", nicetime(float(min_bat_time)), "which is before max_bat. Was the battery changed or has it recovered?"

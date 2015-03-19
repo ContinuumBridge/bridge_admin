@@ -55,6 +55,7 @@ def latest_data (key, bid):
     now = epochtime(s)
 
     latest = 0
+    earliest = 0
     last_ss = 0   
     for s in serieslist:
         ss = s.split('/')
@@ -69,7 +70,7 @@ def latest_data (key, bid):
                     print "**  ", last_ss, "not heard from since:", nicetime(float(latest)), "**   more than 12 hours <-- probably the ones to check"          
                 else:
                     print "    ", last_ss, "heard from today"
-                    print "skipping", last_ss
+                    #print "skipping", last_ss
                     last_ss = ss[1]
                     latest = 0
                     continue 
@@ -81,9 +82,11 @@ def latest_data (key, bid):
         b = json.loads(r.content)        
         b1 = b["e"][0]
         days_since_seen = (now - int(float(b1['t'])))/oneDay
+        hours_since_seen = (now - int(float(b1['t'])))/(60*60)
+        #print(json.dumps(b1, indent=4))
         if allBridges == 0:
             if days_since_seen ==0:
-                print nicetime(float(b1['t'])), "( ", days_since_seen, "days ago) is latest data for", s 
+                print nicetime(float(b1['t'])), "( ", hours_since_seen, "hours ago) is latest data for", s 
             else:
                 print nicetime(float(b1['t'])), "(*", days_since_seen, "days ago) is latest data for", s 
 
