@@ -52,6 +52,7 @@ def latest_data (bid):
     s = time.strftime('%Y-%m-%d %H:%M:%S', t)
     now = epochtime(s)
     
+    #need to do bridges only here
     for i in range(0,len(latestPoints)):
         #print "latest for", latestPoints[i]["name"], "is", nicetime(latestPoints[i]["points"][0][0]/1000)
         latest_time = latestPoints[i]["points"][0][0]/1000
@@ -64,7 +65,7 @@ def latest_data (bid):
             print "**  ", latestPoints[i]["name"], "not heard from since:", nicetime(latest_time), "**  more than 12 hours <-- probably the ones to check"
         else:
             print "    ", latestPoints[i]["name"], "heard from today"
-    
+    # and add the per sensor stuff here (see latest_data.py)
                         
 if __name__ == '__main__':
     latest_data()
