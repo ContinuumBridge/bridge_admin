@@ -18,4 +18,5 @@ pip install requests
 pip install flask-peewee
 pip install click
 pip install websocket-client
+pip install twilio
 
