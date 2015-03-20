@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Must be run as root
+if [ "$(id -u)" != "0" ]; then
+    echo "This script should be run as 'root'. Type: sudo cbridge/setup"
+    exit 1
+fi
+
+# Python packages
+apt-get install -y python-dev
+apt-get install -y python-pip
+apt-get install -y python-software-properties
+apt-get install -y python-pexpect
+apt-get install -y python-twisted
+pip install httplib2
+pip install dropbox
+pip install requests
+pip install flask-peewee
+pip install click
+pip install websocket-client
+
