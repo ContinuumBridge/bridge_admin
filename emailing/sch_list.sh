@@ -3,14 +3,14 @@
 # Used with the following line in /etc/crontab:
 # 15 12   * * *   bridge  /home/bridge/bridge_admin/emailing/sch_list.sh >> /home/bridge/bridge_admin/emailing/sch_mail.log 2>&1
 #
-cd /home/bridge/bridge_admin/emailing
+cd /home/ubuntu/bridge_admin/emailing
 # Sirona
 date
 ./sch_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --key b9b0c3fea6308127164de1616cb97723 --bid BID36 --to "peter.claydon@continuumbridge.com, martin.sotheran@continuumbridge.com, martyn.price@sirona-cic.org.uk"
 date
 ./sch_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --key b9b0c3fea6308127164de1616cb97723 --bid BID45 --to "peter.claydon@continuumbridge.com, martin.sotheran@continuumbridge.com, Mandy.Miles@sirona-cic.org.uk"
 # CBr
-cd /home/bridge/bridge_admin/emailing/CBr_mailing
+cd /home/ubuntu/bridge_admin/emailing/CBr_mailing
 date
 ./CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --key b9b0c3fea6308127164de1616cb97723 --bid BID59 --to "peter.claydon@continuumbridge.com, martin.sotheran@continuumbridge.com"
 #, richard.tarring@sirona-cic.org.uk" just whilst his bridge is dead
