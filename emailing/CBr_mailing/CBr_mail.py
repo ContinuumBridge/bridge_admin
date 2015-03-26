@@ -152,13 +152,15 @@ def cbr_email(user, password, bid, to, key):
             #print "\nurl:", url
             r = requests.get(url, auth=(key,''))
             timeseries[gerasPath] = json.loads(r.content)
-
+            print "timeseries:", json.dumps(timeseries, indent=4)
             series = timeseries[gerasPath]["e"]
 
             # split it into BID, Name, Type (_ is a sledgehammer - see below)
             #ss = re.split('\W+|/|-|_',gerasPath)
             ss = re.split('\W+|/|-',gerasPath)            
             print "First ss:",ss
+
+            exit()
 
             # Change some "types" according to sensor type
             length = len(ss)
