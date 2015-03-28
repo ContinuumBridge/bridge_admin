@@ -7,11 +7,14 @@ cd /home/ubuntu/bridge_admin/emailing
 # Sirona
 date
 ./sch_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --key c685297d8c0f710e3bd1c8e771eb8d3d --bid BID36 --to "peter.claydon@continuumbridge.com, martin.sotheran@continuumbridge.com, martyn.price@sirona-cic.org.uk"
+# stopped until it's up and runnuing again
 date
-./sch_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --key b9b0c3fea6308127164de1616cb97723 --bid BID45 --to "peter.claydon@continuumbridge.com, martin.sotheran@continuumbridge.com, Mandy.Miles@sirona-cic.org.uk"
+./sch_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --key b9b0c3fea6308127164de1616cb97723 --bid BID45 --to "peter.claydon@continuumbridge.com, martin.sotheran@continuumbridge.com"
+#, Mandy.Miles@sirona-cic.org.uk"
+# Stopped until MS solves power problem
 date
 ./sch_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --key c685297d8c0f710e3bd1c8e771eb8d3d --bid BID67 --to "peter.claydon@continuumbridge.com, martin.sotheran@continuumbridge.com"
-#, richard.tarring@sirona-cic.org.uk" just whilst we make sure it's ok
+#, richard.tarring@sirona-cic.org.uk" 
 # CBr
 cd /home/ubuntu/bridge_admin/emailing/CBr_mailing
 date
@@ -25,4 +28,5 @@ cd /home/ubuntu/bridge_admin/ifx_utils/CBr_mailing
 date
 ./ifx_CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --bid BID12 --db "Bridges" --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com" --template "CBr_table_template.htm"
 date
-./ifx_CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --bid BID36 --db "Bridges" --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com" --template "CBr_table_template.htm"
+./ifx_CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --bid BID36 --db "SCH" --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com" --template "CBr_table_template.htm"
+

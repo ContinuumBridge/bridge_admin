@@ -64,11 +64,21 @@ def activeInTenMinutes(series, time):
     return False
 
 def powerInTenMinutes(series, time):
+    """ 
+    This used to return the first value found
+    It now returns the final value as a frig for Richard's radio (and anything else continuous).
+    Flip side is that we'll miss most kettle On->Offs
+    Proper solution is to read the series in the main code & do something sensible
+    Don't check in until this is fixed!!!
+    """
+    finalValue = ""
     for s in series:
         if s["t"] >= time and s["t"] < time + tenMinutes:
-            if s["v"] > 2.5:
-                return True
-    return False
+            finalValue = s['v']
+    if finalValue == "":
+        return ""
+    else:
+        return finalValue
 
 def tempInTenMinutes(series, time):
     for s in series:
@@ -210,17 +220,33 @@ def shc_email(user, password, bid, to, key):
                         h1 = h2.replace(holder, value)
                         working = "h1"
             elif series and "power" in s.lower():
+                for s in series:
+                    print "t:", nicetime(s['t']), "v:", s['v']
+                prev_power = -1 
                 for stepTime in range(startTime, startTime + oneDay, tenMinutes):
                     holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
-                    if powerInTenMinutes(series, stepTime):
-                        value = "On"
+                    value = powerInTenMinutes(series, stepTime)                  
+                    if value == "":
+                        #print "   no points at", nicetime(stepTime)
+                        if prev_power != -1:
+                            #print "      setting", value, "to prev:", prev_power
+                            value = prev_power
                     else:
-                        value = ""
+                        prev_power = value
+                    #print "         resulting in value = ", value    
+
+                    if value < 3.5 or value == "":
+                        #print "         hence OFF"
+                        op = ""
+                    else:
+                        #print "         hence ON"
+                        op = "On"
+
                     if working == "h1":
-                        h2 = h1.replace(holder, value)
+                        h2 = h1.replace(holder, op)
                         working = "h2"
                     else:
-                        h1 = h2.replace(holder, value)
+                        h1 = h2.replace(holder, op)
                         working = "h1"
             elif series and "temperature" in s.lower():
                 prev_temperature = "none"
@@ -287,6 +313,8 @@ def shc_email(user, password, bid, to, key):
         htmlText = h1
     else:
         htmlText = h2
+    
+    #exit()
     
     # Create message container - the correct MIME type is multipart/alternative.
     msg = MIMEMultipart('alternative')

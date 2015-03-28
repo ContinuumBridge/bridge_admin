@@ -136,8 +136,12 @@ def cbr_email_ifx(user, password, bid, to, db, template):
         print "You must provide a bridge ID using the --bid option."
         exit()
     else:
+        # Unlike geras, Influx doesn't return a series if there are no points in the range
+        # So we'd miss dead sensors
+        # So we'll ask for 7 days before startTime on the grounds that we'd always change a battery in that time      
         #select * from /BID11/ where time > 1427025600s and time < 1427112000s
-        q = "select * from /" + bid + "/ where time >" + str(startTime) + "s and time <" + str(endTime) + "s"
+        earlyStartTime = startTime - 7*oneDay
+        q = "select * from /" + bid + "/ where time >" + str(earlyStartTime) + "s and time <" + str(endTime) + "s"
         query = urllib.urlencode ({'q':q})
 
         print "Requesting list of series from", nicetime(startTime), "to", nicetime(endTime)
@@ -151,7 +155,6 @@ def cbr_email_ifx(user, password, bid, to, db, template):
             serieslist.append("/" + pts[i]["name"])
             sensor = "/"+pts[i]["name"]
             vt = []            
-            #print "Processing:", json.dumps(serieslist, indent=4)
             #print "Got:", len(pts[i]["points"]), "points for", pts[i]["name"]
             for j in range(0, len(pts[i]["points"])):
                 t = pts[i]["points"][j][0]/1000
@@ -160,6 +163,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                 vt.append({"v":v, "t":t})
             timeseries[sensor] = {"e":vt}
                 
+        print "Processing:", json.dumps(serieslist, indent=4)
            
     # Read HTML file
     with open(template, "r") as f:
@@ -175,14 +179,14 @@ def cbr_email_ifx(user, password, bid, to, db, template):
     # Headers
     h1 = h2.replace("nnn", bid)
     h2 = h1.replace("&lt;date1&gt;", nicedate(startTime))
-    h1 = h2.replace("&lt;date2&gt;", nicedate(endTime)+" (InfluxDB)")
+    h1 = h2.replace("&lt;date2&gt;", nicedate(endTime))  #+" (InfluxDB/"+db+")")
     working = "h1"
 
     #print "timeseries:", json.dumps(timeseries, indent=4)
     col = 1
     prev = "fubar"
     for path in serieslist:
-        if not("Mesh" in path or "battery" in path or "connected" in path or "luminance" in path or "magnet" in path or "button" in path or "ir_temperature" in path or ("tag_ti" in path.lower() and "temperature" in path) or ("tbk" in path.lower() and "binary" in path.lower())):
+        if not("Mesh" in path or "battery" in path or "connected" in path or "luminance" in path or "magnet" in path or "button" in path or "ir_temperature" in path or ("tag_ti" in path.lower() and "temperature" in path) or ("tbk" in path.lower() and "binary" in path.lower()) or ("answered_door" in path or "came_in" in path or "door_open_too_long" in path or "went_out" in path)):
         
 #        ("binary" in path.lower() and "coffee" in path.lower()) or        
 #        ("binary" in path.lower() and "coffee_cupboard" in path.lower())):                
@@ -339,7 +343,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
     
     # Create message container - the correct MIME type is multipart/alternative.
     msg = MIMEMultipart('alternative')
-    msg['Subject'] = "Activity for bridge " + bid + " from " + nicedate(startTime) + " to " + nicedate(endTime) + " from InfluxDB"
+    msg['Subject'] = "Activity for bridge "+bid+" from "+nicedate(startTime)+" to "+nicedate(endTime)+" (InfluxDB/"+db+")"
     msg['From'] = "Bridges <bridges@continuumbridge.com>"
     recipients = to.split(',')
     [p.strip(' ') for p in recipients]
