@@ -62,14 +62,14 @@ def activeInTenMinutes(series, time):
         if s["t"] >= time and s["t"] < time + tenMinutes:
             return True
     return False
-
+"""
 def powerInTenMinutes(series, time):
     for s in series:
         if s["t"] >= time and s["t"] < time + tenMinutes:
             if s["v"] > 3.5:
                 return True
     return False
-    
+"""    
 def tempInTenMinutes(series, time):
     for s in series:
         if s["t"] >= time and s["t"] < time + tenMinutes:
@@ -136,10 +136,10 @@ def cbr_email_ifx(user, password, bid, to, db, template):
         print "You must provide a bridge ID using the --bid option."
         exit()
     else:
-        # Unlike geras, Influx doesn't return a series if there are no points in the range
+        # Unlike geras, Influx doesn't return a series if there are no points in the selected range
         # So we'd miss dead sensors
         # So we'll ask for 7 days before startTime on the grounds that we'd always change a battery in that time      
-        #select * from /BID11/ where time > 1427025600s and time < 1427112000s
+        # select * from /BID11/ where time > 1427025600s and time < 1427112000s
         earlyStartTime = startTime - 7*oneDay
         q = "select * from /" + bid + "/ where time >" + str(earlyStartTime) + "s and time <" + str(endTime) + "s"
         query = urllib.urlencode ({'q':q})
@@ -159,8 +159,9 @@ def cbr_email_ifx(user, password, bid, to, db, template):
             for j in range(0, len(pts[i]["points"])):
                 t = pts[i]["points"][j][0]/1000
                 v = pts[i]["points"][j][2]
+                n = sensor
                 #print "sensor,t,v:", sensor, t, v
-                vt.append({"v":v, "t":t})
+                vt.append({"v":v, "t":t, "n":n})
             timeseries[sensor] = {"e":vt}
                 
         print "Processing:", json.dumps(serieslist, indent=4)
@@ -186,11 +187,8 @@ def cbr_email_ifx(user, password, bid, to, db, template):
     col = 1
     prev = "fubar"
     for path in serieslist:
-        if not("Mesh" in path or "battery" in path or "connected" in path or "luminance" in path or "magnet" in path or "button" in path or "ir_temperature" in path or ("tag_ti" in path.lower() and "temperature" in path) or ("tbk" in path.lower() and "binary" in path.lower()) or ("answered_door" in path or "came_in" in path or "door_open_too_long" in path or "went_out" in path)):
+        if not("Light-Mesh" in path or "battery" in path or "connected" in path or "luminance" in path or "magnet" in path or "button" in path or "ir_temperature" in path or ("tag_ti" in path.lower() and "temperature" in path) or ("tbk" in path.lower() and "binary" in path.lower()) or "Night_Wander" in path or "answered_door" in path or "came_in" in path or "door_open_too_long" in path or "went_out" in path):      
         
-#        ("binary" in path.lower() and "coffee" in path.lower()) or        
-#        ("binary" in path.lower() and "coffee_cupboard" in path.lower())):                
-                    
             series = timeseries[path]["e"]
             
             # split it into BID, Name, Type (_ is a sledgehammer - see below)
@@ -262,21 +260,43 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                         h1 = h2.replace(holder, value)
                         working = "h1"
             elif series and "power" in path.lower():
-                prev_power = "none"
-                for stepTime in range(startTime, startTime + oneDay, tenMinutes):
-                    holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
-                    value = powerInTenMinutes(series, stepTime)                  
-                    if value == "":
-                        if prev_power != "none":
-                            value = prev_power
-                    else:
-                        prev_power = value
-                        
-                    if value:
-                        op = "On"
-                    else:
-                        op = ""
+                prevPower = "" 
+                if "toaster" in path.lower() or "kettle" in path.lower():
+                    threshold = 1000
+                elif "coffee_maker" in path.lower():
+                    threshold = 50
+                else:
+                    threshold = 3.5
 
+                for stepTime in range(startTime, startTime + oneDay, tenMinutes):
+                    #print "doing", nicetime(stepTime)
+                    op = prevPower
+                    finalValue = -12
+                    latestTime = -1    
+                    for ss in series: # IT GOES THOUGH THEM BACKWARDS IN TIME!!!
+                        holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
+                        """
+                        If any point is over the threshold, the answer, op, is ON. 
+                        Otherwise it's prevPower (which starts at OFF and then is always 
+                        the last value found in the 10 min slot)
+                        """
+                        if ss["t"] >= stepTime and ss["t"] < stepTime + tenMinutes:
+                            #print "   found", ss['v'], "on", ss['n'], "at", nicetime(ss['t'])
+                            if ss['t'] > latestTime:
+                                latestTime = ss['t']
+                                finalValue = ss['v']                            
+                            if ss['v'] > threshold:
+                                op = "On"
+                                #print "***Found a high point:", ss['v'], "at", nicetime(ss['t'])
+                                  
+                    #print "      final value for", ss['n'], "was:", finalValue, "at", nicetime(latestTime)
+                    if finalValue >= threshold:
+                        prevPower = "On"           
+                    elif finalValue >= 0:
+                        prevPower = ""  
+                    # else it was -12; there were no points    
+                                            
+                    #print "         So op = ", op, " and prevPower = ", prevPower, "for", nicetime(stepTime), "on", ss['n']
                     if working == "h1":
                         h2 = h1.replace(holder, op)
                         working = "h2"

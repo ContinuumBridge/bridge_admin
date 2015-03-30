@@ -143,8 +143,9 @@ def cbr_email(user, password, bid, to, key):
     timeseries = {}
     col = 1
     for gerasPath in serieslist:
-        if not("Mesh" in gerasPath or "battery" in gerasPath or "connected" in gerasPath or "luminance" in gerasPath or "magnet" in gerasPath or "button" in gerasPath or "ir_temperature" in gerasPath or ("tag_ti" in gerasPath.lower() and "temperature" in gerasPath)):
-        
+        if not("Light-Mesh" in gerasPath or "battery" in gerasPath or "connected" in gerasPath or "luminance" in gerasPath or "magnet" in gerasPath or "button" in gerasPath or "ir_temperature" in gerasPath or ("tag_ti" in gerasPath.lower() and "temperature" in gerasPath) or ("tbk" in gerasPath.lower() and "binary" in gerasPath.lower())):
+
+              
 #        ("binary" in gerasPath.lower() and "coffee" in gerasPath.lower()) or        
 #        ("binary" in gerasPath.lower() and "coffee_cupboard" in gerasPath.lower())):                
                     
@@ -152,7 +153,7 @@ def cbr_email(user, password, bid, to, key):
             #print "\nurl:", url
             r = requests.get(url, auth=(key,''))
             timeseries[gerasPath] = json.loads(r.content)
-            print "timeseries:", json.dumps(timeseries, indent=4)
+            #print "timeseries:", json.dumps(timeseries, indent=4)
             series = timeseries[gerasPath]["e"]
 
             # split it into BID, Name, Type (_ is a sledgehammer - see below)
@@ -160,7 +161,7 @@ def cbr_email(user, password, bid, to, key):
             ss = re.split('\W+|/|-',gerasPath)            
             print "First ss:",ss
 
-            exit()
+            #exit()
 
             # Change some "types" according to sensor type
             length = len(ss)
