@@ -125,10 +125,19 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                 50
             ], 
             [
-                1427186706876, 
-                15910230001, 
-                50
-            ], 
+                1427116355288, 
+                15798620001, 
+                0
+            ]
+        ], 
+        "name": "BID36/Back_Door/answered_door", 
+        "columns": [
+            "time", 
+            "sequence_number", 
+            "value"
+        ]
+    }, 
+            
 
     """
     timeseries = {}
@@ -155,20 +164,19 @@ def cbr_email_ifx(user, password, bid, to, db, template):
             serieslist.append("/" + pts[i]["name"])
             sensor = "/"+pts[i]["name"]
             vt = []            
-            #print "Got:", len(pts[i]["points"]), "points for", pts[i]["name"]
             for j in range(0, len(pts[i]["points"])):
                 t = pts[i]["points"][j][0]/1000
                 v = pts[i]["points"][j][2]
                 n = sensor
-                #print "sensor,t,v:", sensor, t, v
                 vt.append({"v":v, "t":t, "n":n})
             timeseries[sensor] = {"e":vt}
                 
         print "Processing:", json.dumps(serieslist, indent=4)
            
     # Read HTML file
-    with open(template, "r") as f:
+    with open(template, "r") as f:  
         h1 = f.read()
+    
     # Because there can be "illigal" ASCII characters in the HTML file:
     i = 0
     for c in h1:
@@ -194,7 +202,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
             # split it into BID, Name, Type (_ is a sledgehammer - see below)
             #ss = re.split('\W+|/|-|_',path)
             ss = re.split('\W+|/|-',path)            
-            print "First ss:",ss
+            #print "First ss:",ss
 
             # Change some "types" according to sensor type
             length = len(ss)
@@ -236,7 +244,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
 
             for value in ss[0:len(ss)]:
                 holder = "S_" + str(col) + "_name" + str(ss.index(value)+1)
-                print "holder:", holder, " value:", value
+                print "holder:", holder, " value:", value                
                 if working == "h1":
                     h2 = h1.replace(holder, value)
                     working = "h2"
@@ -267,7 +275,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                     threshold = 50
                 else:
                     threshold = 3.5
-
+                                  
                 for stepTime in range(startTime, startTime + oneDay, tenMinutes):
                     #print "doing", nicetime(stepTime)
                     op = prevPower
@@ -287,7 +295,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                                 finalValue = ss['v']                            
                             if ss['v'] > threshold:
                                 op = "On"
-                                #print "***Found a high point:", ss['v'], "at", nicetime(ss['t'])
+                                #print "  *Found a high point:", ss['v'], "at", nicetime(ss['t'])
                                   
                     #print "      final value for", ss['n'], "was:", finalValue, "at", nicetime(latestTime)
                     if finalValue >= threshold:
@@ -296,7 +304,6 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                         prevPower = ""  
                     # else it was -12; there were no points    
                                             
-                    #print "         So op = ", op, " and prevPower = ", prevPower, "for", nicetime(stepTime), "on", ss['n']
                     if working == "h1":
                         h2 = h1.replace(holder, op)
                         working = "h2"
@@ -377,7 +384,11 @@ def cbr_email_ifx(user, password, bid, to, db, template):
     part1 = MIMEText(text, 'plain')
     part2 = MIMEText(htmlText, 'html')
     
-    fp = open('image001.png', 'rb')
+    if "sirona" in template.lower():
+        fp = open('image001s.png', 'rb')
+    else:
+        fp = open('image001CBr.png', 'rb')
+
     msgImage = MIMEImage(fp.read())
     fp.close()
     # Define the image's ID as referenced above
