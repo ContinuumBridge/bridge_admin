@@ -6,8 +6,8 @@
 cd /home/ubuntu/bridge_admin/emailing
 # Sirona
 date
-./sch_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --key c685297d8c0f710e3bd1c8e771eb8d3d --bid BID36 --to "peter.claydon@continuumbridge.com, martin.sotheran@continuumbridge.com, martyn.price@sirona-cic.org.uk"
-# stopped until it's up and runnuing again
+./sch_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --key c685297d8c0f710e3bd1c8e771eb8d3d --bid BID36 --to "peter.claydon@continuumbridge.com, martin.sotheran@continuumbridge.com"
+#, martyn.price@sirona-cic.org.uk"
 date
 ./sch_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --key b9b0c3fea6308127164de1616cb97723 --bid BID45 --to "peter.claydon@continuumbridge.com, martin.sotheran@continuumbridge.com"
 #, Mandy.Miles@sirona-cic.org.uk" Off 'til she's back online
