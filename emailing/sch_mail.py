@@ -63,14 +63,14 @@ def activeInTenMinutes(series, time):
             return True
     return False
 
+"""
 def powerInTenMinutes(series, time):
-    """ 
     This used to return the first value found
     It now returns the final value as a frig for Richard's radio (and anything else continuous).
     Flip side is that we'll miss most kettle On->Offs
     Proper solution is to read the series in the main code & do something sensible
     Don't check in until this is fixed!!!
-    """
+
     finalValue = ""
     for s in series:
         if s["t"] >= time and s["t"] < time + tenMinutes:
@@ -79,7 +79,7 @@ def powerInTenMinutes(series, time):
         return ""
     else:
         return finalValue
-
+"""
 def tempInTenMinutes(series, time):
     for s in series:
         if s["t"] >= time and s["t"] < time + tenMinutes:
@@ -159,7 +159,7 @@ def shc_email(user, password, bid, to, key):
     timeseries = {}
     col = 1
     for s in serieslist:
-        if not("magnet_y" in s or "magnet_z" in s or "battery" in s or "connected" in s or "luminance" in s): # or ("binary" and "kettle" in s.lower())): we keep losing kettles!
+        if not("magnet_y" in s or "magnet_z" in s or "battery" in s or "connected" in s or "luminance" in s  or ("tbk" in s.lower() and "binary" in s.lower()) or "lounge-light" in s.lower()): 
             url = gerasurl + 'series/' + s +'?start=' + str(startTime) + '&end=' + str(endTime)
             print "url:", url
             r = requests.get(url, auth=(key,''))
@@ -205,6 +205,7 @@ def shc_email(user, password, bid, to, key):
                 else:
                     h1 = h2.replace(holder, value)
                     working = "h1"
+
             if series and ((("door" in s.lower() and "magsw" in s.lower()) or "cupboard" in s.lower()) and "binary" in s.lower()):
                 for stepTime in range(startTime, startTime + oneDay, tenMinutes):
                     holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
@@ -220,34 +221,47 @@ def shc_email(user, password, bid, to, key):
                         h1 = h2.replace(holder, value)
                         working = "h1"
             elif series and "power" in s.lower():
-                for s in series:
-                    print "t:", nicetime(s['t']), "v:", s['v']
-                prev_power = -1 
+                prevPower = "" 
+                if "toaster" in s.lower() or "kettle" in s.lower():
+                    threshold = 1000
+                elif "coffee_maker" in s.lower():
+                    threshold = 50
+                else:
+                    threshold = 3.5
+                    
                 for stepTime in range(startTime, startTime + oneDay, tenMinutes):
-                    holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
-                    value = powerInTenMinutes(series, stepTime)                  
-                    if value == "":
-                        #print "   no points at", nicetime(stepTime)
-                        if prev_power != -1:
-                            #print "      setting", value, "to prev:", prev_power
-                            value = prev_power
-                    else:
-                        prev_power = value
-                    #print "         resulting in value = ", value    
-
-                    if value < 3.5 or value == "":
-                        #print "         hence OFF"
-                        op = ""
-                    else:
-                        #print "         hence ON"
-                        op = "On"
-
+                    op = prevPower
+                    finalValue = -12                    
+                    for ss in series:
+                        #print "n:", ss['n'], "t:", nicetime(ss['t']), "v:", ss['v']
+                        holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
+                        """
+                        If any point is over the threshold, the answer, op, is ON. 
+                        Otherwise it's prevPower (which starts at OFF and then is always 
+                        the last value found in the slot)
+                        """
+                        if ss["t"] >= stepTime and ss["t"] < stepTime + tenMinutes:
+                            #print "   found", s['v'], "on", s['n'], "at", nicetime(s['t'])
+                            finalValue = ss['v'] # always the last value found
+                            if ss['v'] > threshold:
+                                op = "On"
+                                #print "***Found a high point:", ss['v'], "at", nicetime(ss['t'])
+                                    
+                    #print "      final value for", ss['n'], nicetime(stepTime), "was:", finalValue
+                    if finalValue > threshold:
+                        prevPower = "On"           
+                    elif finalValue > 0:
+                        prevPower = ""  
+                    # else it was -12 : there were no points    
+                                            
+                    #print "         So op = ", op, " and prevPower = ", prevPower, "for", nicetime(stepTime), "on", ss['n']
                     if working == "h1":
                         h2 = h1.replace(holder, op)
                         working = "h2"
                     else:
                         h1 = h2.replace(holder, op)
                         working = "h1"
+                        
             elif series and "temperature" in s.lower():
                 prev_temperature = "none"
                 for stepTime in range(startTime, startTime + oneDay, tenMinutes):
