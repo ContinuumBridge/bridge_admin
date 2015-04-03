@@ -64,25 +64,31 @@ def latest_data (bid, db):
     latestPoints = []
     
     url = dburl + "db/" + db + "/series?u=root&p=27ff25609da60f2d&" + query 
-    print "fetching from:", url
-    r = requests.get(url) # ,params=list+series)
-    latestPoints = r.json()
+    #print "fetching from:", url
+    try:
+        r = requests.get(url) # ,params=list+series)
+        latestPoints = r.json()
+    except:
+        print "****No data found in the", db, "database. Probably", bid, "isn't in there****"
+        return #exit()
     #print json.dumps(r.json(), indent=4)
+    #print json.dumps(latestPoints, indent=4)    
     #print json.dumps(r.content, indent=4)
 
     currentBridge = "fubar"
     latest_time = 0
     for i in range(0,len(latestPoints)): # every sensor on every bridge
-        if allBridges == 0: # all sensors on selected bridge
+        if allBridges == 0: # then all sensors on selected bridge
             latest_time = latestPoints[i]["points"][0][0]/1000
             if (now - latest_time)/oneDay ==0:
-                print nicetime(latest_time), "( ", (now-latest_time)/(60*60), "hours ago) is latest data for", latestPoints[i]['name'] 
+                print nicetime(latest_time), "( ", (now-latest_time)/(60*60), "hours ago) is latest data in", db,  "for", latestPoints[i]['name'] 
             else:
-                print nicetime(latest_time), "(*", (now - latest_time)/oneDay, "days ago) is latest data for", latestPoints[i]['name'] 
+                print nicetime(latest_time), "(*", (now - latest_time)/oneDay, "days ago) is latest data in", db, "for", latestPoints[i]['name'] 
         else: # looping on all sensors on all bridges
             bridge = latestPoints[i]["name"].split('/')        
+            lastBridge = latestPoints[-1]["name"].split('/')        
             #print "   processing", latestPoints[i]["name"], "latest data at", nicetime(latestPoints[i]["points"][0][0]/1000)
-            if currentBridge <> bridge[0]:
+            if currentBridge <> bridge[0] or i == len(latestPoints)-1: 
                 # changed bridge so record data then reset             
                 prevLatest = latest_time          
                 prevBridge = currentBridge
@@ -90,18 +96,16 @@ def latest_data (bid, db):
                 currentBridge = bridge[0]
                 
                 latest_time = latestPoints[i]["points"][0][0]/1000 
-                #latest_time = 0 # BUG: should this be from latestPoints to catch the first one?  
                               
                 #print "\nLatest time for", prevBridge, "was", nicetime(prevLatest)                       
                 if prevBridge <> "fubar":
                     if prevAge < oneDay: 
                         print prevBridge, "heard from today at: ", nicetime(prevLatest), "in the", db, "database"                        
                     else : 
-                        print prevBridge, "not heard from since:", nicetime(prevLatest), "(", prevAge/oneDay, ") days in the", db, "database"                                            
+                        print prevBridge, "not heard from since:", nicetime(prevLatest), "(", prevAge/oneDay, ") days ago in the", db, "database"                                            
             else:
             # Accumulate latest points until we change bridge
                 if latestPoints[i]["points"][0][0]/1000 > latest_time:
-                    #print "      updating latest_time for", latestPoints[i]["name"], "from:", nicetime(latest_time), "to:", nicetime(latestPoints[i]["points"][0][0]/1000)        
                     latest_time = latestPoints[i]["points"][0][0]/1000
 
 @click.command()
@@ -118,10 +122,7 @@ def latest_data_loop(bid, db):
             except:
                 print bid, "not in", s, "database"
     else:
-        try:
-            latest_data (bid, db)
-        except:
-            print bid, "not in", s, "database"
+        latest_data (bid, db)
     
 if __name__ == '__main__':
     latest_data_loop()
