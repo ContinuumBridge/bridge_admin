@@ -5,6 +5,8 @@
 # Proprietary and confidential
 # Written by Martin Sotheran
 #
+# Usage:-
+# ./ifx_CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --bid BID12 --db Bridges --template CBr_table_template.htm --to "martin.sotheran@continuumbridge.com"
 
 gerasurl = 'http://geras.1248.io/'
 import requests
@@ -195,7 +197,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
     col = 1
     prev = "fubar"
     for path in serieslist:
-        if not("Light-Mesh" in path or "battery" in path or "connected" in path or "luminance" in path or "magnet" in path or "button" in path or "ir_temperature" in path or ("tag_ti" in path.lower() and "temperature" in path) or ("tbk" in path.lower() and "binary" in path.lower()) or "Night_Wander" in path or "answered_door" in path or "came_in" in path or "door_open_too_long" in path or "went_out" in path):      
+        if not("Light-Mesh" in path or "battery" in path or "connected" in path or "luminance" in path or "magnet" in path or "button" in path or "ir_temperature" in path or ("tag_ti" in path.lower() and "temperature" in path) or ("tbk" in path.lower() and "binary" in path.lower()) or "answered_door" in path or "came_in" in path or "door_open_too_long" in path or "went_out" in path):      
         
             series = timeseries[path]["e"]
             
@@ -240,7 +242,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
             for i in range(0,len(ss)):
                 ss[i] = ss[i].replace("_", " ")
                 #print "ss[",i,"]:", ss[i], "\n"            
-            #print "      3. What's left now?:",ss            
+            print "      3. What's left now?:",ss            
 
             for value in ss[0:len(ss)]:
                 holder = "S_" + str(col) + "_name" + str(ss.index(value)+1)
@@ -267,6 +269,19 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                     else:
                         h1 = h2.replace(holder, value)
                         working = "h1"
+            elif series and ("hotdrink" in path.lower() or "Night_Wander" in path):  
+                for stepTime in range(startTime, startTime + oneDay, tenMinutes):
+                    holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
+                    if activeInTenMinutes(series, stepTime):
+                        value = "Y"
+                    else:
+                        value = ""
+                    if working == "h1":
+                        h2 = h1.replace(holder, value)
+                        working = "h2"
+                    else:
+                        h1 = h2.replace(holder, value)
+                        working = "h1"                
             elif series and "power" in path.lower():
                 prevPower = "" 
                 if "toaster" in path.lower() or "kettle" in path.lower():
