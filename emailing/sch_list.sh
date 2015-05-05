@@ -22,8 +22,7 @@ date
 date
 ./ifx_CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --bid BID36 --db "SCH" --template "Sirona_table_template.htm" --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com, martyn.price@sirona-cic.org.uk"
 date
-./ifx_CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --bid BID45 --db "SCH" --template "Sirona_table_template.htm" --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com"
-#, Mandy.Miles@sirona-cic.org.uk"
+./ifx_CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --bid BID45 --db "SCH" --template "Sirona_table_template.htm" --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com, Mandy.Miles@sirona-cic.org.uk"
 date
 ./ifx_CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --bid BID67 --db "SCH" --template "Sirona_table_template.htm" --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com, richard.tarring@sirona-cic.org.uk"
 
