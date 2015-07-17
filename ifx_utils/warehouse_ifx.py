@@ -156,7 +156,7 @@ def warehouse_ifx(bid, db):
       "Night Wanders" # the number of nighttime hours with >= 1 wander
     """
  
-    f = "bid.csv"
+    f = bid + ".csv"
     with open(f, 'w') as outfile:
         exit()
                       
