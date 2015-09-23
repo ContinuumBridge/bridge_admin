@@ -25,7 +25,7 @@ def listen(name,timeout):
         
 # configure the serial connections (the parameters differs on the device you are connecting to)
 ser = serial.Serial(
-    port='/dev/ttyUSB0',       # Either something COM1 for Windows or /dev/ttyUSB0 fir Linux/RasPi
+    port='/dev/ttyUSB1',       # Either something COM1 for Windows or /dev/ttyUSB0 fir Linux/RasPi
     baudrate= 19200,
     parity=serial.PARITY_NONE,
     stopbits=serial.STOPBITS_ONE,
