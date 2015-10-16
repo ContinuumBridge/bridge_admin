@@ -58,7 +58,7 @@ def epochtime(date_time):
     return epoch
 
 def start():
-    t = time.localtime(time.time() - 4*oneDay)
+    t = time.localtime(time.time() - oneDay)
     yesterday = time.strftime('%Y-%m-%d', t)
     s = yesterday + " 12:00:00"
     return epochtime(s)
