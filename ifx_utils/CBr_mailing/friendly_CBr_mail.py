@@ -10,7 +10,6 @@
 
 # To do
 #  Merge the entry/exit series & put the right text in the boxes
-#  Make x x into a proper series name
 
 gerasurl = 'http://geras.1248.io/'
 import requests
@@ -58,7 +57,7 @@ def epochtime(date_time):
     return epoch
 
 def start():
-    t = time.localtime(time.time() - oneDay)
+    t = time.localtime(time.time() - 3*oneDay)
     yesterday = time.strftime('%Y-%m-%d', t)
     s = yesterday + " 12:00:00"
     return epochtime(s)
@@ -176,16 +175,17 @@ def cbr_email_ifx(user, password, bid, to, db, template):
             #choose what we want
             if "binary" in pts[i]["name"] or "power" in pts[i]["name"] or "entry_exit" in pts[i]["name"] or "temperature" in pts[i]["name"] or "hot_drinks" in pts[i]["name"] or "Night" in pts[i]["name"]:
             #if "hot_drinks" in pts[i]["name"] or "Night" in pts[i]["name"] or "entry" in pts[i]["name"]:  #for debug only  
+            #if "entry" in pts[i]["name"]:  #for debug only  
                 # and get rid of the old names - this list can only grow...
                 if not ("MagSW" in pts[i]["name"] or "Fib" in pts[i]["name"] or "test" in pts[i]["name"] or "TBK" in pts[i]["name"] or "Coffee_jar" in pts[i]["name"]):
                     # and, for Martyn's bridge
-                    if not ("Fridge_Door" in pts[i]["name"] or "Coffee_Cupboard_Door" in pts[i]["name"] or "Coffee/temperature" in pts[i]["name"] or "Utility_Room_Door/binary" in pts[i]["name"] or "TBK" in pts[i]["name"]):
+                    if not ("Fridge_Door" in pts[i]["name"] or "Coffee_Cupboard_Door" in pts[i]["name"] or "Coffee/temperature" in pts[i]["name"] or "Utility_Room_Door/binary" in pts[i]["name"] or "TBK" in pts[i]["name"] or "Kettle/power" in pts[i]["name"]):
                         # Merge the various night wanders
                         if "Night_Wander" in pts[i]["name"]:
-                            if not "x x Night_Wanders" in serieslist:
-                               serieslist.append("x x Night_Wanders")
+                            if not "Night_Wanders" in serieslist:
+                               serieslist.append("/"+bid+"/Night_Wanders")
                                wanders = []            
-                            sensor = "x x Night_Wanders"
+                            sensor = "/" + bid + "/Night_Wanders"
                             for j in range(0, len(pts[i]["points"])):
                                 t = pts[i]["points"][j][0]/1000
                                 v = pts[i]["points"][j][2]
@@ -205,7 +205,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
  
                         try:
                             if wanders:
-                                timeseries["x x Night_Wanders"] = {"e":wanders}
+                                timeseries["/" + bid + "/Night_Wanders"] = {"e":wanders}
                         except:
                             print "No Wanders from", pts[i]["name"]
                
@@ -250,9 +250,11 @@ def cbr_email_ifx(user, password, bid, to, db, template):
         if "binary" in ss:
             if "Kettle" or "Door" in ss: 
                 del ss[ss.index("binary")]            
-        if "Kettle" in ss and "power" in ss:
+        if "Kettle" in ss:
+            del ss[ss.index("Kettle")]            
+            if "power" in ss:
                 del ss[ss.index("power")]            
-        if "entry_exit" in ss: 
+        if "entry_exit" in ss:
             del ss[ss.index("entry_exit")]            
 
         #print "1. What's left?:",ss            
@@ -267,23 +269,41 @@ def cbr_email_ifx(user, password, bid, to, db, template):
         for i in range(0,len(ss)):
             ss[i] = ss[i].replace("_", " ")
             ss[i] = ss[i].replace("PIR", "")            
-            ss[i] = ss[i].replace("Utility Room Door", "Utility Room")            
+            #ss[i] = ss[i].replace("Utility Room Door", "Utility Room")            
             ss[i] = ss[i].replace("hot drinks", "Hot Drinks")            
         #print "3. What's left now?:",ss            
-                              
+
+        eeAction = ""                      
+        if series and "entry_exit" in path.lower():
+            eeAction = ss[-1]
+            del ss[-1]
+        # still leaves 4 series for entry/exit - need to merge them here    
+
         for value in ss[0:len(ss)]:
             holder = "S_" + str(col) + "_name" + str(ss.index(value)+1)
-            print "holder:", holder, " value:", value                
+            print "holder: ", holder, " value:", value                
             if working == "h1":
                 h2 = h1.replace(holder, value)
                 working = "h2"
             else:
                 h1 = h2.replace(holder, value)
-                working = "h1"
-            
-        print "processing path:", path
+                working = "h1"        
+
         # build table entries
-        if series and ("door" in path.lower() or "drawer" in path.lower()):
+        if series and "entry_exit" in path.lower():
+            for stepTime in range(startTime, startTime + oneDay, tenMinutes):
+                holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
+                if activeInTenMinutes(series, stepTime):
+                    value = eeAction
+                else:
+                    value = ""
+                if working == "h1":
+                    h2 = h1.replace(holder, value)
+                    working = "h2"
+                else:
+                    h1 = h2.replace(holder, value)
+                    working = "h1"
+        elif series and ("door" in path.lower() or "drawer" in path.lower()):
             for stepTime in range(startTime, startTime + oneDay, tenMinutes):
                 holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
                 if activeInTenMinutes(series, stepTime):
@@ -309,7 +329,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                 else:
                     h1 = h2.replace(holder, value)
                     working = "h1"
-        elif series and ("x x Night_Wander" in path):  
+        elif series and ("/" + bid+ "/Night_Wander" in path):  
             for stepTime in range(startTime, startTime + oneDay, tenMinutes):
                 holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
                 if activeInTenMinutes(series, stepTime):
@@ -322,7 +342,36 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                 else:
                     h1 = h2.replace(holder, value)
                     working = "h1"                
-        elif series and "power" in path.lower():
+        elif series and "temperature" in path.lower():
+            prev_temperature = "none"
+            for stepTime in range(startTime, startTime + oneDay, tenMinutes):
+                holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
+                value = tempInTenMinutes(series, stepTime)
+                if value == "":
+                    if prev_temperature != "none":
+                        value = prev_temperature
+                else:
+                    prev_temperature = value
+                if working == "h1":
+                    h2 = h1.replace(holder, value)
+                    working = "h2"
+                else:
+                    h1 = h2.replace(holder, value)
+                    working = "h1"
+        elif series and "pir" in path.lower() and "binary" in path.lower():
+            for stepTime in range(startTime, startTime + oneDay, tenMinutes):
+                holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
+                if activeInTenMinutes(series, stepTime):
+                    value = "A"
+                else:
+                    value = ""
+                if working == "h1":
+                    h2 = h1.replace(holder, value)
+                    working = "h2"
+                else:
+                    h1 = h2.replace(holder, value)
+                    working = "h1"
+        elif series and "power" in path.lower(): # need to get rid of power
             prevPower = "" 
             if "toaster" in path.lower() or "kettle" in path.lower():
                 threshold = 1000
@@ -361,36 +410,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                     working = "h2"
                 else:
                     h1 = h2.replace(holder, op)
-                    working = "h1"
-        elif series and "temperature" in path.lower():
-            prev_temperature = "none"
-            for stepTime in range(startTime, startTime + oneDay, tenMinutes):
-                holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
-                value = tempInTenMinutes(series, stepTime)
-                if value == "":
-                    if prev_temperature != "none":
-                        value = prev_temperature
-                else:
-                    prev_temperature = value
-                if working == "h1":
-                    h2 = h1.replace(holder, value)
-                    working = "h2"
-                else:
-                    h1 = h2.replace(holder, value)
-                    working = "h1"
-        elif series and "pir" in path.lower() and "binary" in path.lower():
-            for stepTime in range(startTime, startTime + oneDay, tenMinutes):
-                holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
-                if activeInTenMinutes(series, stepTime):
-                    value = "A"
-                else:
-                    value = ""
-                if working == "h1":
-                    h2 = h1.replace(holder, value)
-                    working = "h2"
-                else:
-                    h1 = h2.replace(holder, value)
-                    working = "h1"
+                    working = "h1"        
         else:
             for stepTime in range(startTime, startTime + oneDay, tenMinutes):
                 holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
@@ -419,39 +439,42 @@ def cbr_email_ifx(user, password, bid, to, db, template):
     #exit()
     
     # Create message container - the correct MIME type is multipart/alternative.
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = "Activity for bridge "+bid+" from "+nicedate(startTime)+" to "+nicedate(endTime)+" (InfluxDB/"+db+")"
-    msg['From'] = "Bridges <bridges@continuumbridge.com>"
-    recipients = to.split(',')
-    [p.strip(' ') for p in recipients]
-    if len(recipients) == 1:
-        msg['To'] = to
-    else:
-        msg['To'] = ", ".join(recipients)
-    # Create the body of the message (a plain-text and an HTML version).
-    text = "Content only available with HTML email clients\n"
-    # Record the MIME types of both parts - text/plain and text/html.
-    part1 = MIMEText(text, 'plain')
-    part2 = MIMEText(htmlText, 'html')
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = "Activity for bridge "+bid+" from "+nicedate(startTime)+" to "+nicedate(endTime)+" (InfluxDB/"+db+")"
+        msg['From'] = "Bridges <bridges@continuumbridge.com>"
+        recipients = to.split(',')
+        [p.strip(' ') for p in recipients]
+        if len(recipients) == 1:
+            msg['To'] = to
+        else:
+            msg['To'] = ", ".join(recipients)
+        # Create the body of the message (a plain-text and an HTML version).
+        text = "Content only available with HTML email clients\n"
+        # Record the MIME types of both parts - text/plain and text/html.
+        part1 = MIMEText(text, 'plain')
+        part2 = MIMEText(htmlText, 'html')
     
-    if "sirona" in template.lower():
-        fp = open('image001s.png', 'rb')
-    else:
-        fp = open('image001CBr.png', 'rb')
+        if "sirona" in template.lower():
+            fp = open('image001s.png', 'rb')
+        else:
+            fp = open('image001CBr.png', 'rb')
 
-    msgImage = MIMEImage(fp.read())
-    fp.close()
-    # Define the image's ID as referenced above
-    msgImage.add_header('Content-ID', '<image001.png>')
-    msg.attach(msgImage)
-    msg.attach(part1)
-    msg.attach(part2)
-    mail = smtplib.SMTP('smtp.gmail.com', 587)
-    mail.ehlo()
-    mail.starttls()
-    mail.login(user, password)
-    mail.sendmail(user, recipients, msg.as_string())
-    mail.quit()
+        msgImage = MIMEImage(fp.read())
+        fp.close()
+        # Define the image's ID as referenced above
+        msgImage.add_header('Content-ID', '<image001.png>')
+        msg.attach(msgImage)
+        msg.attach(part1)
+        msg.attach(part2)
+        mail = smtplib.SMTP('smtp.gmail.com', 587)
+        mail.ehlo()
+        mail.starttls()
+        mail.login(user, password)
+        mail.sendmail(user, recipients, msg.as_string())
+        mail.quit()
+    except Exception as ex:
+        print "sendMail problem. To:", to, "type: ", type(ex), "exception: ", str(ex.args)
 
                   
 if __name__ == '__main__':
