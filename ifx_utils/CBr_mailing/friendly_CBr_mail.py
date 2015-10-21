@@ -67,14 +67,7 @@ def activeInTenMinutes(series, time):
         if s["t"] >= time and s["t"] < time + tenMinutes:
             return True
     return False
-"""
-def powerInTenMinutes(series, time):
-    for s in series:
-        if s["t"] >= time and s["t"] < time + tenMinutes:
-            if s["v"] > 3.5:
-                return True
-    return False
-"""    
+
 def tempInTenMinutes(series, time):
     for s in series:
         if s["t"] >= time and s["t"] < time + tenMinutes:
@@ -174,12 +167,10 @@ def cbr_email_ifx(user, password, bid, to, db, template):
         for i in range(0, len(pts)):
             #choose what we want
             if "binary" in pts[i]["name"] or "power" in pts[i]["name"] or "entry_exit" in pts[i]["name"] or "temperature" in pts[i]["name"] or "hot_drinks" in pts[i]["name"] or "Night" in pts[i]["name"]:
-            #if "hot_drinks" in pts[i]["name"] or "Night" in pts[i]["name"] or "entry" in pts[i]["name"]:  #for debug only  
-            #if "entry" in pts[i]["name"]:  #for debug only  
                 # and get rid of the old names - this list can only grow...
                 if not ("MagSW" in pts[i]["name"] or "Fib" in pts[i]["name"] or "test" in pts[i]["name"] or "TBK" in pts[i]["name"] or "Coffee_jar" in pts[i]["name"]):
                     # and, for Martyn's bridge
-                    if not ("Fridge_Door" in pts[i]["name"] or "Coffee_Cupboard_Door" in pts[i]["name"] or "Coffee/temperature" in pts[i]["name"] or "Utility_Room_Door/binary" in pts[i]["name"] or "TBK" in pts[i]["name"] or "Kettle/power" in pts[i]["name"]):
+                    if not ("Fridge_Door" in pts[i]["name"] or "Coffee_Cupboard_Door" in pts[i]["name"] or "Coffee/temperature" in pts[i]["name"] or "Utility_Room_Door/binary" in pts[i]["name"] or "Utility_Room_PIR/binary" in pts[i]["name"] or "Kettle/power" in pts[i]["name"]):
                         # Merge the various night wanders
                         if "Night_Wander" in pts[i]["name"]:
                             if not "Night_Wanders" in serieslist:
