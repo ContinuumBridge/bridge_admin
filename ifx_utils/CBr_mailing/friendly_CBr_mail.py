@@ -165,40 +165,40 @@ def cbr_email_ifx(user, password, bid, to, db, template):
         # This bit is horrible - a hangover. It reads influx data 
         # and converts it to geras!
         for i in range(0, len(pts)):
-            #choose what we want
-            if "binary" in pts[i]["name"] or "power" in pts[i]["name"] or "entry_exit" in pts[i]["name"] or "temperature" in pts[i]["name"] or "hot_drinks" in pts[i]["name"] or "Night" in pts[i]["name"]:
+            #choose what we want - includes some MP special cases
+            if "entry_exit" in pts[i]["name"] or "temperature" in pts[i]["name"] or "hot_drinks" in pts[i]["name"] or "Night" in pts[i]["name"] or "Outside_PIR/binary" in pts[i]["name"] or "Kitchen_Door/binary" in pts[i]["name"]or "Kitchen_PIR/binary" in pts[i]["name"]:
                 # and get rid of the old names - this list can only grow...
-                if not ("MagSW" in pts[i]["name"] or "Fib" in pts[i]["name"] or "test" in pts[i]["name"] or "TBK" in pts[i]["name"] or "Coffee_jar" in pts[i]["name"]):
-                    # and, for Martyn's bridge
-                    if not ("Fridge_Door" in pts[i]["name"] or "Coffee_Cupboard_Door" in pts[i]["name"] or "Coffee/temperature" in pts[i]["name"] or "Utility_Room_Door/binary" in pts[i]["name"] or "Utility_Room_PIR/binary" in pts[i]["name"] or "Kettle/power" in pts[i]["name"]):
-                        # Merge the various night wanders
-                        if "Night_Wander" in pts[i]["name"]:
-                            if not "Night_Wanders" in serieslist:
-                               serieslist.append("/"+bid+"/Night_Wanders")
-                               wanders = []            
-                            sensor = "/" + bid + "/Night_Wanders"
-                            for j in range(0, len(pts[i]["points"])):
-                                t = pts[i]["points"][j][0]/1000
-                                v = pts[i]["points"][j][2]
-                                n = sensor
-                                #print "adding", nicetime(t), "to wanders"
-                                wanders.append({"v":v, "t":t, "n":n}) 
-                        else:
-                            serieslist.append("/" + pts[i]["name"])
-                            sensor = "/"+pts[i]["name"]
-                            vt = []            
-                            for j in range(0, len(pts[i]["points"])):
-                                t = pts[i]["points"][j][0]/1000
-                                v = pts[i]["points"][j][2]
-                                n = sensor
-                                vt.append({"v":v, "t":t, "n":n})
-                            timeseries[sensor] = {"e":vt}
+                if not ("MagSW" in pts[i]["name"] or "Fib" in pts[i]["name"] or "test" in pts[i]["name"] or "TBK" in pts[i]["name"] or "Coffee" in pts[i]["name"]):
+
+                    # Merge the various night wanders
+                    if "Night_Wander" in pts[i]["name"]:
+                        if not "/" + bid + "/Night_Wanders" in serieslist:
+                           print "adding NW to serieslist cause it's not in:",json.dumps(serieslist, indent=4)
+                           serieslist.append("/"+bid+"/Night_Wanders")
+                           wanders = []            
+                        sensor = "/" + bid + "/Night_Wanders"
+                        for j in range(0, len(pts[i]["points"])):
+                            t = pts[i]["points"][j][0]/1000
+                            v = pts[i]["points"][j][2]
+                            n = sensor
+                            #print "adding", nicetime(t), "to wanders"
+                            wanders.append({"v":v, "t":t, "n":n}) 
+                    else:
+                        serieslist.append("/" + pts[i]["name"])
+                        sensor = "/"+pts[i]["name"]
+                        vt = []            
+                        for j in range(0, len(pts[i]["points"])):
+                            t = pts[i]["points"][j][0]/1000
+                            v = pts[i]["points"][j][2]
+                            n = sensor
+                            vt.append({"v":v, "t":t, "n":n})
+                        timeseries[sensor] = {"e":vt}
  
-                        try:
-                            if wanders:
-                                timeseries["/" + bid + "/Night_Wanders"] = {"e":wanders}
-                        except:
-                            print "No Wanders from", pts[i]["name"]
+                    try:
+                        if wanders:
+                            timeseries["/" + bid + "/Night_Wanders"] = {"e":wanders}
+                    except:
+                        print "No Wanders from", pts[i]["name"]
                
         print "Processing:", json.dumps(serieslist, indent=4)
               
@@ -294,19 +294,6 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                 else:
                     h1 = h2.replace(holder, value)
                     working = "h1"
-        elif series and ("door" in path.lower() or "drawer" in path.lower()):
-            for stepTime in range(startTime, startTime + oneDay, tenMinutes):
-                holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
-                if activeInTenMinutes(series, stepTime):
-                    value = "Open"
-                else:
-                    value = ""
-                if working == "h1":
-                    h2 = h1.replace(holder, value)
-                    working = "h2"
-                else:
-                    h1 = h2.replace(holder, value)
-                    working = "h1"
         elif series and ("hot_drinks" in path):
             for stepTime in range(startTime, startTime + oneDay, tenMinutes):
                 holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
@@ -320,7 +307,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                 else:
                     h1 = h2.replace(holder, value)
                     working = "h1"
-        elif series and ("/" + bid+ "/Night_Wander" in path):  
+        elif series and ("/" + bid+ "/Night_Wanders" in path):  
             for stepTime in range(startTime, startTime + oneDay, tenMinutes):
                 holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
                 if activeInTenMinutes(series, stepTime):
@@ -343,6 +330,19 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                         value = prev_temperature
                 else:
                     prev_temperature = value
+                if working == "h1":
+                    h2 = h1.replace(holder, value)
+                    working = "h2"
+                else:
+                    h1 = h2.replace(holder, value)
+                    working = "h1"
+        elif series and ("door" in path.lower() or "drawer" in path.lower()): # needs to be below temp
+            for stepTime in range(startTime, startTime + oneDay, tenMinutes):
+                holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
+                if activeInTenMinutes(series, stepTime):
+                    value = "Open"
+                else:
+                    value = ""
                 if working == "h1":
                     h2 = h1.replace(holder, value)
                     working = "h2"
