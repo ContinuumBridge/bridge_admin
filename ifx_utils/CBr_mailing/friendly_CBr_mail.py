@@ -67,6 +67,19 @@ def activeInTenMinutes(series, time):
         if s["t"] >= time and s["t"] < time + tenMinutes:
             return True
     return False
+def EEInTenMinutes(series, time):
+    action = ""
+    for s in series:
+        if s["t"] >= time and s["t"] < time + tenMinutes:
+            try:
+                if action:
+                    action = action + "\n" + s["EEaction"]
+                else:
+                    action = s["EEaction"]
+            except:
+                print "Error - looking for EEaction in", s
+                action = "Error - no entry/exit"
+    return action
 
 def tempInTenMinutes(series, time):
     for s in series:
@@ -139,6 +152,10 @@ def cbr_email_ifx(user, password, bid, to, db, template):
 
     """
     timeseries = {}
+    EEbits = ""
+    EEdoor = ""
+    EEsensor = ""
+    EEaction = ""
     if not bid:
         print "You must provide a bridge ID using the --bid option."
         exit()
@@ -168,12 +185,11 @@ def cbr_email_ifx(user, password, bid, to, db, template):
             #choose what we want - includes some MP special cases
             if "entry_exit" in pts[i]["name"] or "temperature" in pts[i]["name"] or "hot_drinks" in pts[i]["name"] or "Night" in pts[i]["name"] or "Outside_PIR/binary" in pts[i]["name"] or "Kitchen_Door/binary" in pts[i]["name"]or "Kitchen_PIR/binary" in pts[i]["name"]:
                 # and get rid of the old names - this list can only grow...
-                if not ("MagSW" in pts[i]["name"] or "Fib" in pts[i]["name"] or "test" in pts[i]["name"] or "TBK" in pts[i]["name"] or "Coffee" in pts[i]["name"]):
+                if not ("Coffee" in pts[i]["name"]): # or "MagSW" in pts[i]["name"] or "Fib" in pts[i]["name"] or "test" in pts[i]["name"] or "TBK" in pts[i]["name"]):
 
                     # Merge the various night wanders
                     if "Night_Wander" in pts[i]["name"]:
                         if not "/" + bid + "/Night_Wanders" in serieslist:
-                           print "adding NW to serieslist cause it's not in:",json.dumps(serieslist, indent=4)
                            serieslist.append("/"+bid+"/Night_Wanders")
                            wanders = []            
                         sensor = "/" + bid + "/Night_Wanders"
@@ -183,6 +199,21 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                             n = sensor
                             #print "adding", nicetime(t), "to wanders"
                             wanders.append({"v":v, "t":t, "n":n}) 
+                    # And all the entry-exits
+                    elif "entry_exit" in pts[i]["name"]:
+                        EEbits = re.split('\W+|/|-',pts[i]["name"])
+                        EEdoor = EEbits[-2]
+                        EEsensor = "/" + bid + "/" + EEdoor
+                        EEaction = EEbits[-1]
+                        if not EEsensor in serieslist:
+                           #print "adding", pts[i]["name"], "to serieslist cause it's not in:",json.dumps(serieslist, indent=4)
+                           serieslist.append(EEsensor)
+                           EEs = []            
+                        for j in range(0, len(pts[i]["points"])):
+                            t = pts[i]["points"][j][0]/1000
+                            v = pts[i]["points"][j][2]
+                            n = EEsensor
+                            EEs.append({"v":v, "t":t, "n":n, "EEaction":EEaction})
                     else:
                         serieslist.append("/" + pts[i]["name"])
                         sensor = "/"+pts[i]["name"]
@@ -194,13 +225,21 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                             vt.append({"v":v, "t":t, "n":n})
                         timeseries[sensor] = {"e":vt}
  
-                    try:
-                        if wanders:
-                            timeseries["/" + bid + "/Night_Wanders"] = {"e":wanders}
-                    except:
-                        print "No Wanders from", pts[i]["name"]
-               
-        print "Processing:", json.dumps(serieslist, indent=4)
+        try:
+            if wanders:
+                timeseries["/" + bid + "/Night_Wanders"] = {"e":wanders}
+        except:
+            print "No Wanders"
+        try:
+            if EEs:
+                timeseries[EEsensor] = {"e":EEs}
+        except:
+           print "No EEs"               
+                    
+        print "Processing serieslist:", json.dumps(serieslist, indent=4)
+        print "EEsensor:", EEsensor, "EEdoor:", EEdoor
+        #print "With timeseries:", timeseries[EEsensor]
+        
               
     # Read HTML file
     with open(template, "r") as f:  
@@ -224,10 +263,11 @@ def cbr_email_ifx(user, password, bid, to, db, template):
     col = 1
     prev = "fubar"
     for path in serieslist:
-        series = timeseries[path]["e"]
+        try:
+            series = timeseries[path]["e"]
+        except:
+            print "Which apparently isn't in timeseries:", json.dumps(timeseries,indent=4)
             
-        # split it into BID, Name, Type (_ is a sledgehammer - see below)
-        #ss = re.split('\W+|/|-|_',path)
         ss = re.split('\W+|/|-',path)            
         #print "First ss:",ss
 
@@ -252,7 +292,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
 
         # First field is always empty, second is always BID
         del ss[0]        
-        del ss[0]
+        del ss[0] # it pops
         #print "2. What's left now?:",ss    
 
         # Remove any spurious underscores inserted by influx
@@ -260,15 +300,8 @@ def cbr_email_ifx(user, password, bid, to, db, template):
         for i in range(0,len(ss)):
             ss[i] = ss[i].replace("_", " ")
             ss[i] = ss[i].replace("PIR", "")            
-            #ss[i] = ss[i].replace("Utility Room Door", "Utility Room")            
             ss[i] = ss[i].replace("hot drinks", "Hot Drinks")            
         #print "3. What's left now?:",ss            
-
-        eeAction = ""                      
-        if series and "entry_exit" in path.lower():
-            eeAction = ss[-1]
-            del ss[-1]
-        # still leaves 4 series for entry/exit - need to merge them here    
 
         for value in ss[0:len(ss)]:
             holder = "S_" + str(col) + "_name" + str(ss.index(value)+1)
@@ -281,13 +314,10 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                 working = "h1"        
 
         # build table entries
-        if series and "entry_exit" in path.lower():
+        if series and EEdoor in path and not "/temperature" in path:
             for stepTime in range(startTime, startTime + oneDay, tenMinutes):
                 holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
-                if activeInTenMinutes(series, stepTime):
-                    value = eeAction
-                else:
-                    value = ""
+                value = EEInTenMinutes(series, stepTime)
                 if working == "h1":
                     h2 = h1.replace(holder, value)
                     working = "h2"
@@ -412,7 +442,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                 else:
                     h1 = h2.replace(holder, value)
                     working = "h1"
-        print "\n"
+        #print "\n"
         col += 1
 
     # Remove any unused holders
