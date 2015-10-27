@@ -156,6 +156,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
     EEdoor = ""
     EEsensor = ""
     EEaction = ""
+    wanders = []
     if not bid:
         print "You must provide a bridge ID using the --bid option."
         exit()
@@ -228,8 +229,14 @@ def cbr_email_ifx(user, password, bid, to, db, template):
         try:
             if wanders:
                 timeseries["/" + bid + "/Night_Wanders"] = {"e":wanders}
+            else:
+                print "No Wanders in the last week, adding column & empty time series:", wanders
+                serieslist.append("/"+bid+"/Night_Wanders")
+                timeseries["/" + bid + "/Night_Wanders"] = {"e":""}                        
         except:
-            print "No Wanders"
+            print "No Wanders at all, adding column adding column & empty time series:", wanders
+            timeseries["/" + bid + "/Night_Wanders"] = {"e":""}            
+            serieslist.append("/"+bid+"/Night_Wanders")
         try:
             if EEs:
                 timeseries[EEsensor] = {"e":EEs}
@@ -237,7 +244,6 @@ def cbr_email_ifx(user, password, bid, to, db, template):
            print "No EEs"               
                     
         print "Processing serieslist:", json.dumps(serieslist, indent=4)
-        print "EEsensor:", EEsensor, "EEdoor:", EEdoor
         #print "With timeseries:", timeseries[EEsensor]
         
               
@@ -266,7 +272,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
         try:
             series = timeseries[path]["e"]
         except:
-            print "Which apparently isn't in timeseries:", json.dumps(timeseries,indent=4)
+            print "Error: Looking for", path, "Which apparently isn't in timeseries:", json.dumps(timeseries,indent=4)
             
         ss = re.split('\W+|/|-',path)            
         #print "First ss:",ss
