@@ -59,14 +59,9 @@ def today():
 @click.option('--db', nargs=1, help='The database to look in')
 
 def MP_Wanders(bid, db):
-    insideSensors = []
-    night_start = " 23:00:00"
-    night_end = "07:00:00"
-    night_duration = 60*60*8 # i.e. 7am.
-    # Much easier with an offset rather than trying to work out day crossings
-    # i.e. having converted them to epochtime
-    # night_duration = (night_end + oneDay) - night_start
-    
+    night_start = 23 # i.e. 23:00
+    night_end = 6 # i.e. 6am.
+    night_ignore_time = 10*60 # 10mins
     """ 
     We get:-
     [
@@ -96,9 +91,8 @@ def MP_Wanders(bid, db):
     if not bid or not db:
         print "You must provide a bridge ID and a database"
         exit()
-    else: # fetch all the night-wandering data
-        # Unlike geras, Influx doesn't return a series if there are no points in the selected range
-        q = "select * from /" + bid + ".*binary/ limit 25"
+    else: 
+        q = "select * from /" + bid + ".*binary/" # limit 5000"
         query = urllib.urlencode ({'q':q})
     
         print "Requesting data from BID", bid
@@ -109,33 +103,76 @@ def MP_Wanders(bid, db):
         
     time_index = 0
     value_index = 2
+    wanderTimes = []
+    realWanderTimes = []
     for t in pts:
-        if ("Outside" not in t["name"].lower()):
+        if ("outside" not in t["name"].lower()): # and "kitchen_pir" in t["name"].lower()):
             for p in t["points"]:
-                #print "p:", p            
-                if p[value_index] == 1:
-                    print "1 at:", nicetime(p[time_index]/1000), "on", t["name"]
-                
+                ti = time.localtime(p[time_index]/1000)
+                #print "ti[3]:", ti[3]
+                if p[value_index] == 1 and (ti[3] == night_start or ti[3] < night_end):
+                    wanderTimes.append(p[time_index]/1000)
+                    #print "***Wander on", t["name"], "at",nicetime(p[time_index]/1000) #, "on",nicedate(p[time_index]/1000)
 
-    exit()
-    """for i in range(0, len(pts)): # steps through the sensors
-            if not (("Outside" in pts[i]["name"]) and ("Hall" in pts[i]["name"])):
-                for j in range(0, len(pts[i]["points"])):
-                    if pts[i]["points"][j][0]/1000 > day and pts[i]["points"][j][0]/1000 < day + night_duration: 
-                        if pts[i]["points"][j][2] == 1:                
-                            #print "wander= ", pts[i]["points"][j][2], " at", nicetime(pts[i]["points"][j][0]/1000), "on ", pts[i]["name"]
-                            wandercount += 1
-        wanders.update({nicedate(day):wandercount})
-        day = day + oneDay
+    # ug, now we need them in time order to implement night_ignore_time
+    wanderTimes.sort()
+    firstWanderTime = wanderTimes[0]
+    firstWanderDate = time.strftime("%Y %b %d %H:%M", time.localtime(wanderTimes[0])).split()
+    firstWanderDate[3] = "00:00"
+    firstWanderDate_epoch = time.mktime(time.strptime(" ".join(firstWanderDate), "%Y %b %d %H:%M"))
+
+    print "firstWander is:", nicetime(firstWanderTime)
+
+    # implement night_ignore_time
+    for wt in wanderTimes: # hopefully sequential!
+        #print "next wt:", nicetime(wt)
+        if wt == firstWanderTime:
+            realWanderTimes.append(wt)
+        elif wt > firstWanderTime + night_ignore_time:
+            firstWanderTime = wt # it's a new wander
+            realWanderTimes.append(wt)
+            #print "**new wander at:", nicetime(wt)
+        # else: part of same wander       
+
+    #for wt in realWanderTimes: # hopefully sequential!
+    #    print "sorted real wandertimes:", nicetime(wt)
+
+    # debounce the switches back into the original list
+    wanderTimes = []
+    prev_wt = 0
+    for wt in realWanderTimes: # hopefully sequential!
+        if wt != prev_wt:
+            wanderTimes.append(wt)
+            prev_wt = wt
         
-    print "Wanders:", json.dumps(wanders, indent=4)
-    """
-    
-    
+    #for wt in wanderTimes: # hopefully sequential!
+    #    print "remaining wandertimes:", nicetime(wt)
+
+  
+    day = firstWanderDate_epoch
+    wc = 0
+    wander_counts = []
+    headers = "Time, Wanders"
     f = bid + ".csv"
     with open(f, 'w') as outfile:
-        exit()
-                      
+        outfile.write(headers + '\n')   
+        while day <= today():
+            for wt in wanderTimes:
+                if wt > day and wt < (day + oneDay):
+                    wc += 1
+                    #print "adding", nicetime(wt), "to wander counts on", nicetime(day)
+            wander_counts.append({"date":nicetime(day),"count":wc})
+            day += oneDay
+            wc = 0
+
+        for j in wander_counts:
+            print "adding Wander counts to file:", j
+            line = str(j["date"]) + "," + str(j["count"]) + "\n"
+            outfile.write(line)
+
+    #print "wander_counts:", json.dumps(wander_counts, indent=4)            
+
+                     
 if __name__ == '__main__':
     MP_Wanders()
 

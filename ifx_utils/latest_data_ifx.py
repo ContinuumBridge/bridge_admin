@@ -64,7 +64,7 @@ def latest_data (bid, db):
     latestPoints = []
     
     url = dburl + "db/" + db + "/series?u=root&p=27ff25609da60f2d&" + query 
-    #print "fetching from:", url
+    print "fetching from:", url
     try:
         r = requests.get(url) # ,params=list+series)
         latestPoints = r.json()
