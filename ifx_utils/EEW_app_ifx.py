@@ -56,153 +56,109 @@ def epochTimeOfDay(date_time):
 @click.option('--db', nargs=1, help='The database.')
 
 def EEW_app_ifx(bid, db):
+    t_index = 0 
+    v_index = 2
 
-    # Build the list of available temp sensors on bid & build inside/outside lists
     if not bid:
         print "You must provide a bridge ID using the --bid option."
         exit()
 
-    # Unlike geras, Influx doesn't return a series if there are no points in the selected range
-    q = "select * from /" + bid + ".*outside.*temperature.*/ limit 50"
-    query = urllib.urlencode ({'q':q})    
-    print "Requesting data from BID", bid
-    url = dburl + "db/" + db + "/series?u=root&p=27ff25609da60f2d&" + query 
+    q = "select * from /" + bid + "\/.*temperature.*/ limit 450"   
+    #q = "select * from /.*/ limit 1"
+    query = urllib.urlencode ({'q':q})
+
+    bidList = []
+    print "Requesting data from db", db
+    url = dburl + "db/" + db + "/series?u=root&p=27ff25609da60f2d&" + query
     print "fetching from:", url
     r = requests.get(url)
-    pts = r.json()     
-    
-    exit()
-    for t in allseries:
-        if (bid+"/") in t and "temperature" in t.lower() and "outside" in t.lower():
-            outside_serieslist.append(t)
-        elif (bid+"/") in t and "temperature" in t.lower(): # it's inside
-            inside_serieslist.append(t)
-            inside_count += 1
-     
-    # Fetch all the data
-    series_i = {}
-    series_o = {}  
-    for s in outside_serieslist:
-        url = gerasurl + 'series' + s # + "?rollup=avg&interval=1h"        
-        print "Fetching:", url     
-        ro = requests.get(url, auth=(key,''))
-        series_o[s] = json.loads(ro.content)
-        outsideSeries = series_o[s]["e"] # a list of dicts
-        firstD = outsideSeries[0]['t']
-        lastD = outsideSeries[-1]['t']
+    pts = r.json()
+    #print "pts:", json.dumps (pts, indent=4)
 
-    insideSeries = {}
-    for s in inside_serieslist:
-        url = gerasurl + 'series' + s # + "?rollup=avg&interval=1h"        
-        print "Fetching:", url     
-        ri = requests.get(url, auth=(key,''))
-        series_i[s] = json.loads(ri.content)
-        insideSeries[s] = series_i[s]["e"] # a list of dicts
-        if firstD < insideSeries[s][0]['t']:
-            firstD = insideSeries[s][0]['t']
-        if lastD > insideSeries[s][-1]['t']:
-            lastD = insideSeries[s][-1]['t']
-                                
+    sensors = []
+    sensorCount = 0
+    # paranoid: check we're in time order! and find the sensors whilst we're at it
+    for s in pts:
+        prevT = 0
+        sensors.append({s["name"]:-1})
+        sensorCount += 1
+        for p in reversed(s["points"]): 
+            if p[t_index] < prevT:
+                print "Gone backwards in time on", s["name"], nicetime(p[t_index]/1000)
+                exit()
+            prevT = p[0]
+
+    # that being the case we can go on to find start and end times
+    firstD = time.time()
+    print "now = ", nicetime(firstD)
+    lastD = 0
+    for sensor in pts:
+        if "temperature" in sensor["name"].lower():
+            print "found:", sensor["name"]
+            for pt in sensor["points"]:
+                #print "checking point:", nicetime(pt[t_index]/1000), pt[v_index]
+                if pt[t_index]/1000 > lastD:
+                    lastD = pt[t_index]/1000 
+                    #print "lastD becomes", nicetime(pt[t_index]/1000), "on:", sensor["name"]
+                if pt[t_index]/1000 < firstD:
+                    firstD = pt[t_index]/1000 
+                    #print "firstD becomes", nicetime(pt[t_index]/1000), "on:", sensor["name"]
     firstDay = time.strftime("%Y %b %d %H:%M", time.localtime(firstD)).split()
     lastDay = time.strftime("%Y %b %d %H:%M", time.localtime(lastD)).split()
     lastDay[3] = "00:00"
     firstDay[3] = "00:00"
     fd_epoch = time.mktime(time.strptime(" ".join(firstDay), "%Y %b %d %H:%M"))
     ld_epoch = time.mktime(time.strptime(" ".join(lastDay), "%Y %b %d %H:%M"))
-
-    daysToProcess = []                      
-    minmax_list_i = []
-    minmax_list_o = []        
-    for day in range(int(fd_epoch),int(ld_epoch), oneDay):
-        #print "\n*** Next Day *** Next Day *** Next Day *** Next Day *** Next Day *** Next Day *** Next Day"
-        #for s in outside_serieslist: # For now, there's only one
-        minmax = {'day':day, 's':s, 'max_t':-100, 'max_time':0, 'max_index':-1, 'min_t':100, 'min_time':-0, 'min_index':-1, 'datapoints':0}
-        for p in range(0,len(outsideSeries)):
-            minmax['s'] = outsideSeries[p]['n'] #remember there's only one
-            if outsideSeries[p]['t'] > day+startNight_e and outsideSeries[p]['t'] < (day+oneDay+endNight_e):
-                #print "outside t,v:", outsideSeries[p]['t'], ":", outsideSeries[p]['v']
-                if outsideSeries[p]['v'] > minmax['max_t']:
-                    minmax['max_t'] = outsideSeries[p]['v']
-                    minmax['max_time'] = outsideSeries[p]['t']
-                    minmax['max_index'] = p                        
-                if outsideSeries[p]['v'] < minmax['min_t']:
-                    minmax['min_t'] = outsideSeries[p]['v']
-                    minmax['min_time'] = outsideSeries[p]['t']
-                    minmax['min_index'] = p
-                #print "outside minmax for day:", nicetime(day)
-                #print json.dumps(minmax, indent=4)
-
-        # Only proceed if there were enough outside points 
-        if minmax['min_index'] - minmax['max_index'] > 3 and (
-          # and min was after max, and they were far enough apart - say 4 hours
-          minmax['min_time'] - minmax['max_time'] > 4*oneHour): 
-             #print "    Adding", nicedate(day), minmax['s'], "to minmax_list_o"
-            minmax_list_o.append (minmax)           
-            dayAdded = 0
-            for s in inside_serieslist:
-                #print "Next s on", nicedate(day), "is", s 
-                minmax = {'day':day, 's':s, 'max_t':-100, 'max_time':0, 'max_index':-1, 'min_t':100, 'min_time':-0, 'min_index':-1, 'datapoints':0}
-                for p in range(0,len(insideSeries[s])):
-                    if insideSeries[s][p]['t'] > day+startNight_e and insideSeries[s][p]['t'] < (day+oneDay+endNight_e):
-                        if insideSeries[s][p]['v'] > minmax['max_t']:
-                            minmax['max_t'] = insideSeries[s][p]['v']
-                            minmax['max_time'] = insideSeries[s][p]['t']
-                            minmax['max_index'] = p
-                        if insideSeries[s][p]['v'] < minmax['min_t']:
-                            minmax['min_t'] = insideSeries[s][p]['v']
-                            minmax['min_time'] = insideSeries[s][p]['t']
-                            minmax['min_index'] = p
-                        minmax['datapoints'] = minmax['min_index'] - minmax['max_index']
-                # similar conditions for inclusion as for outside
-                if minmax['min_index'] - minmax['max_index'] >= 3 and (
-                # and min was after max, and they were far enough apart - say 4 hours
-                  minmax['min_time'] - minmax['max_time'] > 4*oneHour):
-                    minmax_list_i.append(minmax)
-                    if not dayAdded:
-                        daysToProcess.append(day)
-                        dayAdded = 1
-                        #print "Adding", nicedate(day), s, "to days to process"
-                """
-                elif minmax['datapoints'] >1:
-                    print "Eliminating", s, "on", nicetime(day), "because:", json.dumps(minmax, indent=4)
-                    print "   and maxtime:", nicetime(minmax['max_time']), "mintime:", nicetime(minmax['min_time']), ":", (minmax['min_time']-minmax['max_time'])/oneHour, "hours"
-                """
-
-    # What have we got?       
-    #print "inside:", json.dumps(minmax_list_i, indent=4)
-    #print json.dumps(daysToProcess, indent=4)
-                   
-    #print "Found:" #, len(days_toProcess), "days out of", int((ld_epoch - fd_epoch)/oneDay)
-    eff = 0
-    for today in daysToProcess:
-        print "New day:", today, nicedate(today)
-        for d in minmax_list_o:
-            if d['day'] == today:
-                #print json.dumps(d, indent=4) # "min_out=", minmax_list_o[day]['min_t'], "max_out=", minmax_list_o[day]['max_t']
-                tot = 0
-                for i in range(d['max_index'], d['min_index']):
-                    #print "    ", nicetime(outsideSeries[i]['t']),":",outsideSeries[i]['v']
-                    tot = tot + outsideSeries[i]['v']
-                outAve = tot/(d['min_index'] - d['max_index'])
-
-        for s in inside_serieslist:
-            for d in minmax_list_i:
-                if d['day'] == today and d['s'] == s:
-                    tFall = d['max_t'] - d['min_t']
-                    timeDiff = (float(d['min_time']) - float(d['max_time']))/60/60                        
-                    tdiff = d['max_t'] - outAve
-                    eff = 1/(tFall/timeDiff/tdiff)
-                    #minmax['eff'] = eff
-                    print "     today:",nicedate(today), "eff=", eff, "for", s
-
-    print json.dumps(minmax_list_i, indent=4) 
     
-    """
-    ip = raw_input("Continue? (CR): ") 
-    if ip <> "": 
-        exit()                                                     
-    """
-        
+    t_off_window_start = oneHour * 21 # 9pm
+    t_off_window_end = oneDay + oneHour * 2 # 2am
+    t_on_window_start = oneDay + oneHour * 3 # 3am
+    t_on_window_end = oneDay + oneHour * 9 # 9am
+    # for each day
+    # for each room
+    # establish time_on and time_off
+    # are there enough outside points between these times?
+    # do the analysis
+    print "firstD:", nicetime(firstD), "lastD:", nicetime(lastD)
+    for thisDay in range(int(fd_epoch),int(ld_epoch), oneDay):
+        for sensor in pts:
+            time_on = 0
+            time_off = 0
+            minTemp = 30
+            prevTemp = 0
+            print "doing", nicetime(thisDay), "for:", sensor["name"]
+
+            # find time_off and time_on for inside sensors
+            if "outside" not in sensor["name"].lower():
+                for pt in reversed(sensor["points"]):
+                    if pt[t_index]/1000 >= thisDay + t_on_window_start and pt[t_index]/1000 <=  thisDay + t_on_window_end:
+                        print "point in ON window:", nicetime(pt[t_index]/1000), pt[v_index] 
+                        if pt[v_index] < minTemp:
+                            minTemp = pt[v_index]
+                            time_on = pt[t_index]/1000
+                            print "     min so far:", pt[v_index], "at", nicetime(pt[t_index]/1000)
+                    elif pt[t_index]/1000 >= thisDay + t_off_window_start and pt[t_index]/1000 <=  thisDay + t_off_window_end:
+                        print "point in OFF window:", nicetime(pt[t_index]/1000), pt[v_index] 
+                        if pt[v_index] > prevTemp: # a positive gradient so not the last point
+                            time_off = pt[t_index]/1000
+                            prevTemp = pt[v_index]
+                            print "     last +ve grad to:", pt[v_index], "at", nicetime(pt[t_index]/1000)
+            
+            c = {sensor["name"]: 0}
+            if time_on == 0:
+                print "*** Failed to find time_on for:", nicetime(thisDay), sensor["name"]
+            elif time_off == 0:
+                print "*** Failed to find time_off for:", nicetime(thisDay), sensor["name"]
+                #continue
+            else:            
+                print "    so for", nicetime(thisDay), "time_off = ", nicetime(time_off), "time_on = ", nicetime(time_on)
+                #Count the night points
+                for x in sensor["points"]:
+                    if x[t_index]/1000 > time_off and x[t_index]/1000 <  time_on:
+                        #print "--> night points:", nicetime(x[t_index]/1000), x[v_index] 
+                        c[sensor["name"]] += 1
+            print "        Night count for", c[sensor["name"]], "is:", json.dumps(c, indent = 4) 
+
 if __name__ == '__main__':
     EEW_app_ifx()
 
