@@ -197,7 +197,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
     col = 1
     prev = "fubar"
     for path in serieslist:
-        if not("Light-Mesh" in path or "battery" in path or "connected" in path or "luminance" in path or "magnet" in path or "button" in path or "ir_temperature" in path or ("tag_ti" in path.lower() and "temperature" in path) or ("tbk" in path.lower() and "binary" in path.lower()) or "answered_door" in path or "came_in" in path or "door_open_too_long" in path or "went_out" in path):      
+        if not("Light-Mesh" in path or "battery" in path or "connected" in path or "luminance" in path or "magnet" in path or "button" in path or "ir_temperature" in path or ("tag_ti" in path.lower() and "temperature" in path) or ("tbk" in path.lower() and "binary" in path.lower()) or "answered_door" in path or "came_in" in path or "door_open_too_long" in path or "went_out" in path or "night_start" in path or "night_end" in path or "wander_count" in path or "office_heater" in path.lower() or "hot" in path):      
         
             series = timeseries[path]["e"]
             
@@ -215,17 +215,19 @@ def cbr_email_ifx(user, password, bid, to, db, template):
             if "binary" in ss:
                 if "Kettle" or "Door" in ss: 
                     del ss[ss.index("binary")]            
-            #print "1. What's left?:",ss            
+            print "1. What's left?:",ss            
             
             # get rid of blank field, BID & sensor type unless it's a KM
             if "KM" in ss:
                 del ss[0:2]
             elif "Night_Wander" in ss:
+                print "deleting:", ss[3]
                 del ss[3]
+                print "and deleting:", ss[0:2]
                 del ss[0:2]
             else:
                 del ss[0:3]
-            #print "   2. What's left now?:",ss                           
+            print "   2. What's left now?:",ss                           
             
             # squash it down to three lines for the template
             if len(ss) > 4:
