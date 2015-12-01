@@ -77,9 +77,11 @@ def latest_data (bid, db):
 
     currentBridge = "fubar"
     latest_time = 0
+    sensorDates = []
     for i in range(0,len(latestPoints)): # every sensor on every bridge
         if allBridges == 0: # then all sensors on selected bridge
             latest_time = latestPoints[i]["points"][0][0]/1000
+            sensorDates.append({"name": latestPoints[i]["name"], "days_old":(now-latest_time)/oneDay})
             if (now - latest_time)/oneDay ==0:
                 print nicetime(latest_time), "( ", (now-latest_time)/(60*60), "hours ago) is latest data in", db,  "for", latestPoints[i]['name'] 
             else:
@@ -107,6 +109,7 @@ def latest_data (bid, db):
             # Accumulate latest points until we change bridge
                 if latestPoints[i]["points"][0][0]/1000 > latest_time:
                     latest_time = latestPoints[i]["points"][0][0]/1000
+    return sensorDates
 
 @click.command()
 @click.option('--bid', nargs=1, help='The bridge ID to check.')
@@ -118,11 +121,11 @@ def latest_data_loop(bid, db):
         DBs = ["Bridges", "SCH"]
         for s in DBs:
             try:
-                latest_data (bid, s)
+                sensorDates = latest_data (bid, s)
             except:
                 print bid, "not in", s, "database"
     else:
-        latest_data (bid, db)
+        sensorDates = latest_data (bid, db)
     
 if __name__ == '__main__':
     latest_data_loop()
