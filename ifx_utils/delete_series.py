@@ -30,11 +30,14 @@ def delete_series (bid, db, time_limit):
  
     sensorDates = latest_data(bid, db) 
     print "\nThe following are >", time_limit, "days old"
+    if not sensorDates:
+        print "No data, bombing out"
+        exit()
     for p in sensorDates:
         if p["days_old"] >= int(time_limit):
             n += 1
             print  "    ", p["name"], p["days_old"], "days old"
-    if n ==0:
+    if n == 0:
         print "    Nothing older than", time_limit, "days"
     else:
         ip = raw_input("\nDelete everything older than time_limit, confirm each one or exit? (Everything/c/e):")
