@@ -190,16 +190,17 @@ def cbr_email_ifx(user, password, bid, to, db, template):
 
                     # Merge the various night wanders
                     if "Night_Wander" in pts[i]["name"]:
-                        if not "/" + bid + "/Night_Wanders" in serieslist:
-                           serieslist.append("/"+bid+"/Night_Wanders")
-                           wanders = []            
-                        sensor = "/" + bid + "/Night_Wanders"
-                        for j in range(0, len(pts[i]["points"])):
-                            t = pts[i]["points"][j][0]/1000
-                            v = pts[i]["points"][j][2]
-                            n = sensor
-                            #print "adding", nicetime(t), "to wanders"
-                            wanders.append({"v":v, "t":t, "n":n}) 
+                        if not ("night_start" in pts[i]["name"] or "night_end" in pts[i]["name"] or "wander_count" in pts[i]["name"]):
+                            if not "/" + bid + "/Night_Wanders" in serieslist:
+                               serieslist.append("/"+bid+"/Night_Wanders")
+                               wanders = []            
+                            sensor = "/" + bid + "/Night_Wanderings"
+                            for j in range(0, len(pts[i]["points"])):
+                                t = pts[i]["points"][j][0]/1000
+                                v = pts[i]["points"][j][2]
+                                n = sensor
+                                #print "adding", nicetime(t), "on", sensor, "to wanders"
+                                wanders.append({"v":v, "t":t, "n":n}) 
                     # And all the entry-exits
                     elif "entry_exit" in pts[i]["name"]:
                         EEbits = re.split('\W+|/|-',pts[i]["name"])
@@ -234,7 +235,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                 serieslist.append("/"+bid+"/Night_Wanders")
                 timeseries["/" + bid + "/Night_Wanders"] = {"e":""}                        
         except:
-            print "No Wanders at all, adding column adding column & empty time series:", wanders
+            print "No Wanders at all, adding column & empty time series:", wanders
             timeseries["/" + bid + "/Night_Wanders"] = {"e":""}            
             serieslist.append("/"+bid+"/Night_Wanders")
         try:
