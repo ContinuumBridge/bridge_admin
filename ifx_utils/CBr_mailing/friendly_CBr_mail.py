@@ -211,11 +211,14 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                            #print "adding", pts[i]["name"], "to serieslist cause it's not in:",json.dumps(serieslist, indent=4)
                            serieslist.append(EEsensor)
                            EEs = []            
+                        prevt = 0
                         for j in range(0, len(pts[i]["points"])):
                             t = pts[i]["points"][j][0]/1000
                             v = pts[i]["points"][j][2]
                             n = EEsensor
-                            EEs.append({"v":v, "t":t, "n":n, "EEaction":EEaction})
+                            if t <> prevt: # for some reason we've had multiple events at the same time which makes the mail look silly!
+                                EEs.append({"v":v, "t":t, "n":n, "EEaction":EEaction})
+                            prevt = t
                     else:
                         serieslist.append("/" + pts[i]["name"])
                         sensor = "/"+pts[i]["name"]
