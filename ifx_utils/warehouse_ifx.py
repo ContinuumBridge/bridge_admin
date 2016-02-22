@@ -6,7 +6,8 @@
 # Written by Martin Sotheran
 #
 # Usage:-
-# ./warehouse_ifx.py --bid "BID11" --db "Bridges"
+# ./warehouse_ifx.py --bid "BID11" "BID12" "" --db "Bridges"
+# N.B. 3 bridge args so pad with "" to do fewer
 
 import requests
 import json
@@ -22,6 +23,7 @@ import urllib
 oneHour            = 60 * 60
 oneDay             = oneHour * 24
 dburl = "http://onepointtwentyone-horsebrokedown-1.c.influxdb.com:8086/"
+csvPath = "/home/martin/Dropbox/"
 
 def nicetime(timeStamp):
     localtime = time.localtime(timeStamp)
@@ -55,10 +57,10 @@ def today():
     return epochtime(s)
 
 @click.command()
-@click.option('--bid', nargs=1, help='The bridge ID.')
+@click.option('--bids', nargs=3, help='The bridge IDs in a list.')
 @click.option('--db', nargs=1, help='The database to look in')
 
-def warehouse_ifx(bid, db):
+def warehouse_ifx(bids, db):
     """ 
     We get:-
     [
@@ -84,25 +86,40 @@ def warehouse_ifx(bid, db):
     }           
 
     """
+    daysAgo = 1 
     oneDay = 60*60*24
-    yesterday = today() - oneDay
+    startDay = today() - daysAgo*oneDay
 
-    if not bid or not db:
+    if not bids or not db:
         print "You must provide a bridge ID and a database"
         exit()
-    else: 
+
+    rowCount = 0
+    notes = ["Unique night wanders are in 10 minute intervals.\n", "Hot drink requires kettle plus fridge/coffee cupboard.\n"]
+    headers = "24 Hours from,Bridge,NightStart,NightEnd,NightWanderCount,KettleCount,HotDrinkCount,Notes\n"
+    file = csvPath + nicedate(startDay) + " SCH.csv"
+    f = open(file, 'wb')
+    f.write(headers)
+
+    for bid in bids: 
+        if not bid:
+            continue
+        rowCount += 1
         # Unlike geras, Influx doesn't return a series if there are no points in the selected range
-        # so it's best to fetch data from before you need it.
-        #q = "select * from /" + bid + "/ WHERE time > " + str(yesterday*1000) # Seems to fetch everything!
-        q = "select * from /" + bid + "/ WHERE time > now() - 2d" 
+        # so it's best to fetch data from before you need it. Hence minus (daysAgo+2) below.
+        # And we're having to fetch data relative to now() so make it (daysAgo+3) to be sure to get all the relevant
+        # data whatever time we're run.
+        #q = "select * from /" + bid + "/ WHERE time > " + str(startDay*1000) # Seems to fetch everything!
+        #q = "select * from /" + bid + "/ WHERE time > now() - 2d" 
+        q = "select * from /" + bid + "/ WHERE time > now() - " + str(daysAgo+3) +"d"
         query = urllib.urlencode ({'q':q})
     
-        print "Requesting data from", query
+        print "Doing bid:", bid, "Requesting data from", query
         url = dburl + "db/" + db + "/series?u=root&p=27ff25609da60f2d&" + query 
-        print "fetching from:", url
+        #print "fetching from:", url
         r = requests.get(url)
         pts = r.json()     
-        # print "We got:", json.dumps(pts, indent=4)
+        #print "We got:", json.dumps(pts, indent=4)
 
         cutList = []
         for p in pts:
@@ -110,57 +127,58 @@ def warehouse_ifx(bid, db):
                 if not "connected" in p["name"].lower() and not "power" in p["name"].lower() and not "binary" in p["name"].lower(): 
                     cutList.append(p)
 
+        """
         for q in cutList:
-            print "We got:", q["name"]                    
+            print "cutList:", q["name"]                    
         #print "We got:", json.dumps(cutList, indent=4)                    
-    
-    if not cutList:
-        print "no data. Exit..."
-        exit()
-    
-    # csv fields
-    Date = nicetime(yesterday)
-    Bridge = bid
-    NightStart = "null"
-    NightEnd = "null"
-    NightWanderCount = -1
-    KettleCount = 0
-    HotDrinkCount = 0
+        """
+
+        # csv columns
+        Date = nicetime(startDay)
+        Bridge = bid
+        NightStart = "null"
+        NightEnd = "null"
+        NightWanderCount = -1
+        KettleCount = -1
+        HotDrinkCount = -1
  
-    for series in cutList:
-        #print "Looking at:", json.dumps(series, indent=4)                    
-        for p in series["points"]:
-            #print "p:", p
-            # trim it to the required times
-            if p[0]/1000 >= yesterday and p[0]/1000 <= yesterday + oneDay:
-                if "night_end" in series["name"]:
-                    print "night_end:", nicetime(p[2]/1000)
-                    NightEnd = nicehours(p[2]/1000)
-                elif "night_start" in series["name"]:
-                    print "night_start:", nicetime(p[2]/1000)
-                    NightStart = nicehours(p[2]/1000)
-                elif "wander_count" in series["name"]:
-                    print "wander_count =", p[2]
-                    NightWanderCount = p[2]
-                elif "kettle" in series["name"].lower() and p[2] == 1:
-                    KettleCount += 1
-                elif "hot_drinks" in series["name"].lower() and p[2] == 1:
-                    HotDrinkCount += 1
-                else:
-                    print "Error: no data found"
+        for series in cutList:
+            #print "Looking at:", json.dumps(series, indent=4)                    
+            for p in series["points"]:
+                # trim it to the required times
+                if p[0]/1000 >= startDay and p[0]/1000 <= startDay + oneDay:
+                    if "night_end" in series["name"]:
+                        print "night_end:", nicetime(p[2]/1000), "came out at:", nicetime(p[0]/1000)
+                        NightEnd = nicehours(p[2]/1000)
+                    elif "night_start" in series["name"]:
+                        print "night_start:", nicetime(p[2]/1000), "came out at:", nicetime(p[0]/1000)
+                        NightStart = nicehours(p[2]/1000)
+                    elif "wander_count" in series["name"]:
+                        print "wander_count =", p[2], "came out at:", nicetime(p[0]/1000)
+                        NightWanderCount = p[2]
+                    elif "kettle" in series["name"].lower() and p[2] == 1:
+                        if KettleCount == -1:
+                            KettleCount = 1
+                        else:
+                            KettleCount += 1
+                    elif "hot_drinks" in series["name"].lower() and p[2] == 1:
+                        if HotDrinkCount == -1:
+                            HotDrinkCount = 1
+                        else:
+                            HotDrinkCount += 1
+                    else:
+                        print "Error: no data found for", bid
 
-    print "KettleCount = ", KettleCount
-    print "HotDrinkCount = ", HotDrinkCount
+        print "KettleCount = ", KettleCount
+        print "HotDrinkCount = ", HotDrinkCount
+        if rowCount > len(notes):
+            row = [Date, bid, NightStart, NightEnd, str(NightWanderCount), str(KettleCount), str(HotDrinkCount)]
+        else:
+            row = [Date, bid, NightStart, NightEnd, str(NightWanderCount), str(KettleCount), str(HotDrinkCount),notes[rowCount-1]]
+        print "Row:", row
+        fr = ', '.join(row)
+        f.write(fr)
 
-    notes = "Unique night wanders are in 10 minute intervals. Hot drink requires kettle plus fridge/coffee cupboard"
-    headers = "24 Hours from,Bridge,NightStart,NightEnd,NightWanderCount,KettleCount,HotDrinkCount,Notes\n"
-    firstRow = [Date, bid, NightStart, NightEnd, str(NightWanderCount), str(KettleCount), str(HotDrinkCount),notes]
-    print "firstRow:", firstRow
-    fr = ', '.join(firstRow)
-    file = bid + ".csv"
-    f = open(file, 'wb')
-    f.write(headers)
-    f.write(fr)
                
 if __name__ == '__main__':
     warehouse_ifx()
