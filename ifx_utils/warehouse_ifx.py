@@ -59,15 +59,6 @@ def today():
 @click.option('--db', nargs=1, help='The database to look in')
 
 def warehouse_ifx(bid, db):
-    nightSensors = [] # not implemented yet
-    night_start = " 23:00:00"
-    night_end = "07:00:00"
-    # For now
-    night_duration = 60*60*8 # i.e. 7am.
-    # Much easier with an offset rather than trying to work out day crossings
-    # i.e. having converted them to epochtime
-    # night_duration = (night_end + oneDay) - night_start
-    
     """ 
     We get:-
     [
@@ -93,73 +84,83 @@ def warehouse_ifx(bid, db):
     }           
 
     """
+    oneDay = 60*60*24
+    yesterday = today() - oneDay
 
     if not bid or not db:
         print "You must provide a bridge ID and a database"
         exit()
-    else: # fetch all the night-wandering data
+    else: 
         # Unlike geras, Influx doesn't return a series if there are no points in the selected range
-        q = "select * from /" + bid + ".*binary.*/" # limit 50"
+        # so it's best to fetch data from before you need it.
+        #q = "select * from /" + bid + "/ WHERE time > " + str(yesterday*1000) # Seems to fetch everything!
+        q = "select * from /" + bid + "/ WHERE time > now() - 2d" 
         query = urllib.urlencode ({'q':q})
     
-        print "Requesting data from BID", bid
+        print "Requesting data from", query
         url = dburl + "db/" + db + "/series?u=root&p=27ff25609da60f2d&" + query 
         print "fetching from:", url
         r = requests.get(url)
         pts = r.json()     
-       
-    # find the earliest and latest night_start and eliminate outside data
-    # assumption for now is that all binary inside sensors take part
-    # N.B. data isn't in time order
-    # It'll be much easier in real time!!
-    earliest = today()
-    latest = 0
-    for i in range(0, len(pts)): # steps through the sensors
-        if not (("Outside" in pts[i]["name"]) and ("Hall" in pts[i]["name"])): # Hall is just for doggie
-            nightSensors.append(pts[i]["name"])
-            for j in range(0, len(pts[i]["points"])):
-                if (pts[i]["points"][j][0]/1000 < earliest):
-                    earliest = pts[i]["points"][j][0]/1000
-                if (pts[i]["points"][j][0]/1000 > latest):
-                    latest = pts[i]["points"][j][0]/1000
-    print "Earlist data is at:", earliest, " = ", nicetime(earliest), "on", pts[i]["name"], "latest is", nicetime(latest)           
-    print "Processing data from:", json.dumps(nightSensors, indent=4)                    
+        # print "We got:", json.dumps(pts, indent=4)
 
-    s = time.strftime('%Y-%m-%d', time.localtime(earliest))
-    startDateTime = epochtime(s + night_start)
-    #print "startDateTime=", nicetime(startDateTime), "until: ", nicetime(startDateTime + night_duration)
+        cutList = []
+        for p in pts:
+            if "hot_drinks" in p["name"].lower() or "night_start" in p["name"].lower() or "night_end" in p["name"].lower() or "wander_count" in p["name"].lower() or bid.lower()+"/kettle" in p["name"].lower():
+                if not "connected" in p["name"].lower() and not "power" in p["name"].lower() and not "binary" in p["name"].lower(): 
+                    cutList.append(p)
+
+        for q in cutList:
+            print "We got:", q["name"]                    
+        #print "We got:", json.dumps(cutList, indent=4)                    
     
-    # Count the wander events
-    wanders = {}
-    day = startDateTime
-    while day <= latest:
-        #print "day=", nicetime(day)
-        wandercount = 0
-        for i in range(0, len(pts)): # steps through the sensors
-            if not (("Outside" in pts[i]["name"]) and ("Hall" in pts[i]["name"])):
-                for j in range(0, len(pts[i]["points"])):
-                    if pts[i]["points"][j][0]/1000 > day and pts[i]["points"][j][0]/1000 < day + night_duration: 
-                        if pts[i]["points"][j][2] == 1:                
-                            #print "wander= ", pts[i]["points"][j][2], " at", nicetime(pts[i]["points"][j][0]/1000), "on ", pts[i]["name"]
-                            wandercount += 1
-        wanders.update({nicedate(day):wandercount})
-        day = day + oneDay
-        
-    print "Wanders:", json.dumps(wanders, indent=4)
-    """
-    Afraid this is as far as I got.
-    Need to:-
-    1. Count the hours (not days) containing a night wander
-    2. Put this into the csv file with columns
-      "Date"
-      "bid"
-      "Night Wanders" # the number of nighttime hours with >= 1 wander
-    """
- 
-    f = bid + ".csv"
-    with open(f, 'w') as outfile:
+    if not cutList:
+        print "no data. Exit..."
         exit()
-                      
+    
+    # csv fields
+    Date = nicetime(yesterday)
+    Bridge = bid
+    NightStart = "null"
+    NightEnd = "null"
+    NightWanderCount = -1
+    KettleCount = 0
+    HotDrinkCount = 0
+ 
+    for series in cutList:
+        #print "Looking at:", json.dumps(series, indent=4)                    
+        for p in series["points"]:
+            #print "p:", p
+            # trim it to the required times
+            if p[0]/1000 >= yesterday and p[0]/1000 <= yesterday + oneDay:
+                if "night_end" in series["name"]:
+                    print "night_end:", nicetime(p[2]/1000)
+                    NightEnd = nicehours(p[2]/1000)
+                elif "night_start" in series["name"]:
+                    print "night_start:", nicetime(p[2]/1000)
+                    NightStart = nicehours(p[2]/1000)
+                elif "wander_count" in series["name"]:
+                    print "wander_count =", p[2]
+                    NightWanderCount = p[2]
+                elif "kettle" in series["name"].lower() and p[2] == 1:
+                    KettleCount += 1
+                elif "hot_drinks" in series["name"].lower() and p[2] == 1:
+                    HotDrinkCount += 1
+                else:
+                    print "Error: no data found"
+
+    print "KettleCount = ", KettleCount
+    print "HotDrinkCount = ", HotDrinkCount
+
+    notes = "Unique night wanders are in 10 minute intervals. Hot drink requires kettle plus fridge/coffee cupboard"
+    headers = "24 Hours from,Bridge,NightStart,NightEnd,NightWanderCount,KettleCount,HotDrinkCount,Notes\n"
+    firstRow = [Date, bid, NightStart, NightEnd, str(NightWanderCount), str(KettleCount), str(HotDrinkCount),notes]
+    print "firstRow:", firstRow
+    fr = ', '.join(firstRow)
+    file = bid + ".csv"
+    f = open(file, 'wb')
+    f.write(headers)
+    f.write(fr)
+               
 if __name__ == '__main__':
     warehouse_ifx()
-
