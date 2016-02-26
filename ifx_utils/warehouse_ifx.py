@@ -23,7 +23,7 @@ import urllib
 oneHour            = 60 * 60
 oneDay             = oneHour * 24
 dburl = "http://onepointtwentyone-horsebrokedown-1.c.influxdb.com:8086/"
-csvPath = "/home/martin/Dropbox/"
+csvPath = "/home/martin/Dropbox/Bridge Logs/WarehouseData/"
 
 def nicetime(timeStamp):
     localtime = time.localtime(timeStamp)
