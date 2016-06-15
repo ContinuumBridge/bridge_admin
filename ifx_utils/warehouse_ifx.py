@@ -98,7 +98,7 @@ def warehouse_ifx(bids, db, daysago):
     rowCount = 0
     notes = ["Unique night wanders are in 10 minute intervals.\n", "Hot drink requires kettle plus fridge/coffee cupboard.\n"]
     headers = "24 Hours from,Bridge,NightStart,NightEnd,NightWanderTime,NightWanderSensor,NightWanderCount,KettleCount,HotDrinkCount,Notes\n"
-    file = csvPath + nicedate(startDay) + " SCH.csv"
+    file = csvPath + nicedate(startDay) + "_SCH.csv"
     try:
         f = open(file, 'wb')
         f.write(headers)
