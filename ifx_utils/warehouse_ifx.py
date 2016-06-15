@@ -6,7 +6,7 @@
 # Written by Martin Sotheran
 #
 # Usage:-
-# ./warehouse_ifx.py --bid "BID11" "BID12" "" --db "Bridges"
+# ./warehouse_ifx.py --bids "BID11" "BID12" "" --db "Bridges"
 # N.B. 3 bridge args so pad with "" to do fewer
 
 import requests
@@ -18,6 +18,8 @@ import re
 import smtplib
 from itertools import cycle
 import urllib
+import pysftp
+import sys
 
 #Constants
 oneHour            = 60 * 60
@@ -209,6 +211,15 @@ def warehouse_ifx(bids, db, daysago):
                 fr = ', '.join(row)
                 f.write(fr)
 
+    f.close()
+    
+    #srv = pysftp.Connection(host="ftp.continuumbridge.com", username="sirona",
+    #private_key='/home/ubuntu/.ssh/authorized_keys')
+    srv = pysftp.Connection(host="ftp.continuumbridge.com", username="sirona",
+       password="WNNeH;\>Cb3ZHgEX")
+    srv.chdir('ftp')
+    srv.put(file)
+    srv.close()
                
 if __name__ == '__main__':
     warehouse_ifx()
