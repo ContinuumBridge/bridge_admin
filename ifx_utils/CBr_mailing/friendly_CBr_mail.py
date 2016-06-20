@@ -153,7 +153,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
     """
     timeseries = {}
     EEbits = ""
-    EEdoor = ""
+    EEdoor = "foowillneverbeinpath"
     EEsensor = ""
     EEaction = ""
     wanders = []
@@ -207,8 +207,9 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                         EEdoor = EEbits[-2]
                         EEsensor = "/" + bid + "/" + EEdoor
                         EEaction = EEbits[-1]
+                        print "EEdoor:", EEdoor, "EEsensor:", EEsensor, "EEaction:", EEaction
                         if not EEsensor in serieslist:
-                           #print "adding", pts[i]["name"], "to serieslist cause it's not in:",json.dumps(serieslist, indent=4)
+                           print "adding", pts[i]["name"], "to serieslist cause it's not in:",json.dumps(serieslist, indent=4)
                            serieslist.append(EEsensor)
                            EEs = []            
                         prevt = 0
@@ -325,6 +326,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
 
         # build table entries
         if series and EEdoor in path and not "/temperature" in path:
+            print "doing EEs for some reason. EEdoor:", EEdoor, "path:", path
             for stepTime in range(startTime, startTime + oneDay, tenMinutes):
                 holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
                 value = EEInTenMinutes(series, stepTime)
