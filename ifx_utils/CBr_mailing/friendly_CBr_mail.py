@@ -177,8 +177,8 @@ def cbr_email_ifx(user, password, bid, to, db, template):
         #print json.dumps(r.json(), indent=4)
         #print ("we got:", json.dumps(r.content, indent=4))
     
-        for i in range(0, len(pts)):
-            print "We got:", pts[i]["name"]        
+        #for i in range(0, len(pts)):
+        #    print "We got:", pts[i]["name"]        
     
         # This bit is horrible - a hangover. It reads influx data 
         # and converts it to geras!
@@ -207,7 +207,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
                         EEdoor = EEbits[-2]
                         EEsensor = "/" + bid + "/" + EEdoor
                         EEaction = EEbits[-1]
-                        print "EEdoor:", EEdoor, "EEsensor:", EEsensor, "EEaction:", EEaction
+                        #print "EEdoor:", EEdoor, "EEsensor:", EEsensor, "EEaction:", EEaction
                         if not EEsensor in serieslist:
                            print "adding", pts[i]["name"], "to serieslist cause it's not in:",json.dumps(serieslist, indent=4)
                            serieslist.append(EEsensor)
@@ -248,7 +248,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
         except:
            print "No EEs"               
                     
-        print "Processing serieslist:", json.dumps(serieslist, indent=4)
+        #print "Processing serieslist:", json.dumps(serieslist, indent=4)
         #print "With timeseries:", timeseries[EEsensor]
         
               
@@ -326,7 +326,6 @@ def cbr_email_ifx(user, password, bid, to, db, template):
 
         # build table entries
         if series and EEdoor in path and not "/temperature" in path:
-            print "doing EEs for some reason. EEdoor:", EEdoor, "path:", path
             for stepTime in range(startTime, startTime + oneDay, tenMinutes):
                 holder = "S_" + str(col) + "_" + stepHourMin(stepTime)
                 value = EEInTenMinutes(series, stepTime)
