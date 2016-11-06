@@ -18,7 +18,7 @@ from operator import itemgetter
 
 @click.command()
 @click.option('--s1', prompt='First series', help='First geras series starting with BIDnn/')
-@click.option('--s2', prompt='Second series', help='Second geras series starting with BIDnn/')
+@click.option('--s2', help='Second geras series starting with BIDnn/')
 @click.option('--sout', prompt='Output series to write', help='The resulting series (this can also be s1 or s2)')
 @click.option('--key', prompt='Geras master (write) API key', help='Your Geras API key. See http://geras.1248.io/user/apidoc.')
 

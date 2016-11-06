@@ -9,18 +9,18 @@ from twisted.internet import threads
 from twisted.internet import defer
 from twisted.internet import reactor
 
-# Production
+#CID 64 on Production. Key: 6b8b20b7r2oPxGmlwjoFuJD/iLKCPTkBOW/ZR9F2vnyxGd1pHLVVime+srwxoOTP
 #CB_ADDRESS          = "portal.continuumbridge.com"
-#KEY                 = "2de18eaaCmNW4fCgTiSo5npqXsKNWM9WXLfgsnQghO5QgCHBzcXCd0efQToS8gma"
+#KEY                 = "6b8b20b7r2oPxGmlwjoFuJD/iLKCPTkBOW/ZR9F2vnyxGd1pHLVVime+srwxoOTP"
 # Staging service test
 CB_ADDRESS          = "staging.continuumbridge.com"
 KEY                 = "649e038do23icDEnfrtxf0BRCbLw9exPIyTDKSxJtm8EGm10jG4vMjUFRZqLmbfE"
 START_DELAY         = 60
 SWITCH_INTERVAL     = 60
 # Staging:
-DESTINATION         = "BID84/AID29"
+DESTINATION         = "BID106/AID29"
 # Production
-#DESTINATION         = "BID27/AID12"
+#DESTINATION         = "BID167/AID12"
 
 class Connection(object):
     def __init__(self):
