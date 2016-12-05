@@ -9,7 +9,7 @@
 # ./friendly_CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --bid BID36 --db "SCH" --template CBr_table_template.htm --to "martin.sotheran@continuumbridge.com"
 
 # To do
-#  Merge the entry/exit series & put the right text in the boxes
+#  Merge the entry/exit series & put the right text in the boxes.
 
 gerasurl = 'http://geras.1248.io/'
 import requests
