@@ -490,7 +490,7 @@ def cbr_email_ifx(user, password, bid, to, db, template):
         if "sirona" in template.lower():
             fp = open('image001s.png', 'rb')
         else:
-            fp = open('image001CBr.png', 'rb')
+            fp = open('image001CBrn.png', 'rb')
 
         msgImage = MIMEImage(fp.read())
         fp.close()
