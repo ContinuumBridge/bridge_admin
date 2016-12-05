@@ -2,6 +2,7 @@
 *.csv
 *.swp
 *.log
+venv*
 
 # C extensions
 *.so
