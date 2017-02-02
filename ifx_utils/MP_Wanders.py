@@ -103,16 +103,22 @@ def MP_Wanders(bid, db):
         
     time_index = 0
     value_index = 2
+    earliestWC = 1448064000000 # when we implemented wander_count 
     wanderTimes = []
     realWanderTimes = []
+
+    print "discarding everything after", nicetime(earliestWC/1000)
     for t in pts:
         if ("outside" not in t["name"].lower()): # and "kitchen_pir" in t["name"].lower()):
             for p in t["points"]:
-                ti = time.localtime(p[time_index]/1000)
-                #print "ti[3]:", ti[3]
-                if p[value_index] == 1 and (ti[3] == night_start or ti[3] < night_end):
-                    wanderTimes.append(p[time_index]/1000)
-                    #print "***Wander on", t["name"], "at",nicetime(p[time_index]/1000) #, "on",nicedate(p[time_index]/1000)
+                if p[time_index] < 1000*today(): #earliestWC:
+                    ti = time.localtime(p[time_index]/1000)
+                    # ti[3] is the hour
+                    if p[value_index] == 1 and (ti[3] == night_start or ti[3] < night_end):
+                        wanderTimes.append(p[time_index]/1000)
+                        print "***Wander on", t["name"], "at",nicetime(p[time_index]/1000)
+                # else:
+                    # print "discarding points at", nicetime(p[time_index]/1000) 
 
     # ug, now we need them in time order to implement night_ignore_time
     wanderTimes.sort()
@@ -122,22 +128,21 @@ def MP_Wanders(bid, db):
     firstWanderDate_epoch = time.mktime(time.strptime(" ".join(firstWanderDate), "%Y %b %d %H:%M"))
 
     print "firstWander is:", nicetime(firstWanderTime)
-
+    #for j in wanderTimes:
+        #print "sorted wanders are:", nicetime(j)
     # implement night_ignore_time
     for wt in wanderTimes: # hopefully sequential!
         #print "next wt:", nicetime(wt)
         if wt == firstWanderTime:
             realWanderTimes.append(wt)
+            # print "**first wander at:", nicetime(wt)
         elif wt > firstWanderTime + night_ignore_time:
             firstWanderTime = wt # it's a new wander
             realWanderTimes.append(wt)
-            #print "**new wander at:", nicetime(wt)
+            # print "**new wander at:", nicetime(wt)
         # else: part of same wander       
 
-    #for wt in realWanderTimes: # hopefully sequential!
-    #    print "sorted real wandertimes:", nicetime(wt)
-
-    # debounce the switches back into the original list
+    # debounce the switches (remove duplicates) back into the original list
     wanderTimes = []
     prev_wt = 0
     for wt in realWanderTimes: # hopefully sequential!
@@ -145,8 +150,8 @@ def MP_Wanders(bid, db):
             wanderTimes.append(wt)
             prev_wt = wt
         
-    #for wt in wanderTimes: # hopefully sequential!
-    #    print "remaining wandertimes:", nicetime(wt)
+    for wt in wanderTimes: # hopefully sequential!
+        print "remaining wandertimes:", nicetime(wt)
 
   
     day = firstWanderDate_epoch
@@ -156,7 +161,7 @@ def MP_Wanders(bid, db):
     f = bid + ".csv"
     with open(f, 'w') as outfile:
         outfile.write(headers + '\n')   
-        while day <= today():
+        while day <= today(): #earliestWC/1000:
             for wt in wanderTimes:
                 if wt > day and wt < (day + oneDay):
                     wc += 1
@@ -166,7 +171,7 @@ def MP_Wanders(bid, db):
             wc = 0
 
         for j in wander_counts:
-            print "adding Wander counts to file:", j
+            #print "adding Wander counts to file:", j
             line = str(j["date"]) + "," + str(j["count"]) + "\n"
             outfile.write(line)
 
