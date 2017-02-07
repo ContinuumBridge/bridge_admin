@@ -109,7 +109,7 @@ def dyh (user, password, bid, to, db, daysago):
         pts = r.json()
         #print json.dumps(r.json(), indent=4)
     
-        Text = "\nSummary of " + nicedate(startTime) + " from 6an\n"
+        Text = "\nSummary of " + nicedate(startTime) + " from 6am\n"
         selectedSeries = []
         #allPIRSeries = [[] for x in xrange(0,4)]
         allPIRSeries = []
@@ -179,7 +179,7 @@ def dyh (user, password, bid, to, db, daysago):
         """
 
         # New doors - solving magically re-appearing resident!
-        doorString1 = "\nNew Front Door\n"
+        doorString1 = "\nFront Door\n"
         INOUT = "unknown"
         doorCloseTime = 0
         doorOpen = False
