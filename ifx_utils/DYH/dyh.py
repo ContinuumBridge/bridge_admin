@@ -115,6 +115,7 @@ def dyh (user, password, bid, to, db, daysago):
         allPIRSeries = []
         wanderSeries = []
         powerSeries = []
+        inOutSeries = []
         tvSeries = []
         doorSeries = []
         roomCount = 0
@@ -156,11 +157,16 @@ def dyh (user, password, bid, to, db, daysago):
                 for pt in item["points"]:
                     if pt[i_time] > startTime*1000 + 18*oneHour*1000 and pt[i_time] <= endTime*1000: # night only
                         wanderSeries.append({"time":pt[i_time],  "name": item["name"], "value": pt[i_data]})
+            if not "wander" in item["name"].lower() and ("front" in item["name"].lower() or "pir" in item["name"].lower()):
+                for pt in item["points"]:
+                    if pt[i_time] > startTime*1000 and pt[i_time]/1000 <=startTime + oneDay:
+                        inOutSeries.append({"time":pt[i_time],  "name": item["name"], "value": pt[i_data]})
         allPIRSeries.sort(key=operator.itemgetter('time'))
         tvSeries.sort(key=operator.itemgetter('time'))
         doorSeries.sort(key=operator.itemgetter('time'))
         powerSeries.sort(key=operator.itemgetter('time'))
         wanderSeries.sort(key=operator.itemgetter('time'))
+        inOutSeries.sort(key=operator.itemgetter('time'))
 
         """
         prevTime = 0
@@ -172,19 +178,105 @@ def dyh (user, password, bid, to, db, daysago):
             prevRoom = j["room"]
         """
 
-       # doors - entry/exit and fridge
+        # New doors - solving magically re-appearing resident!
+        doorString1 = "\nNew Front Door\n"
+        INOUT = "unknown"
+        doorCloseTime = 0
+        doorOpen = False
+        windowAfter  = 1000*35*oneMinute 
+        lastActivityTime = 0
+        waiting = False
+        prevEvent = {}
+        for event in inOutSeries:
+            if event == prevEvent:
+                print nicetime(event["time"]/1000), "*** ignoring duplicate event on", event["name"]
+            else:
+                prevEvent = event
+                if "door" in event["name"].lower() and event["value"] == 0:
+                    if not doorOpen:
+                        print nicetime(event["time"]/1000), "WARNING: door gone from closed to closed"
+                    print nicetime(event["time"]/1000), "Door closed, IO:", INOUT
+                    if event["time"] - doorOpenTime > 10*oneMinute*1000:
+                        print "   Warning, door opened for > 10mins"
+                        doorString =  doorString + "   " + nicehours(doorOpenTime/1000) + ": Warning door was open for " + str((doorCloseTime - doorOpenTime)/1000/60) + " minutes\n"
+                    doorOpen = False
+                    waiting = True
+                    doorCloseTime = event["time"]
+
+                elif "door" in event["name"].lower() and event["value"] == 1:
+                    print nicetime(event["time"]/1000), "Door Opened, IO:", INOUT
+                    if doorOpen:
+                        print nicetime(event["time"]/1000), "WARNING: door gone from open to open"
+                    doorOpen = True
+                    doorOpenTime = event["time"]
+                    if doorCloseTime <> 0:
+                        if INOUT == "in" and waiting:
+                            waiting = False
+                            if event["time"] <= doorCloseTime + windowAfter: # Door opened in window
+                                print nicetime(event["time"]/1000), "IN: Door opened in window    -> stayed 1 in at", nicetime(doorCloseTime/1000)
+                                doorString1 = doorString1 + "   " + nicehours(doorCloseTime/1000) + ": Door open, didn't leave\n"
+                            elif event["time"] >= doorCloseTime + windowAfter:
+                                print nicetime(event["time"]/1000), "IN: Door opened after window -> went out at", nicetime(doorCloseTime/1000), "waited", (event["time"]-doorCloseTime)/1000/60, "minutes"
+                                doorString1 = doorString1 + "   " + nicehours(doorCloseTime/1000) + ": Door open, went out\n"
+                                INOUT = "out"
+                            else:
+                                print "IN: Door opened sometime"
+                        elif INOUT == "out" and waiting:
+                            waiting = False
+                            if event["time"] <= doorCloseTime + windowAfter: # Door opened in window
+                                print nicetime(event["time"]/1000), "OUT: Door opened in window - stop waiting"
+                            elif event["time"] >= doorCloseTime + windowAfter:
+                                print nicetime(event["time"]/1000), "OUT: Door opened after window -> didn't come in at", nicetime(doorCloseTime/1000), "waited", (event["time"]-doorCloseTime)/1000/60, "mins"
+                                doorString1 = doorString1 + "   " + nicehours(doorCloesTime/1000) + ": Door open, didn't come in\n"
+                                INOUT = "out"
+                            else:
+                                print "OUT: Door opened sometime"
+                        elif INOUT == "unknown" and waiting:
+                            print "unknown IO: Door opened sometime"
+
+
+                elif "pir" in event["name"].lower() and event["value"] == 1:
+                    lastActivityTime = event["time"]
+                    if doorCloseTime <> 0:
+                        if INOUT == "in" and waiting:
+                            waiting = False
+                            if event["time"] <= doorCloseTime + windowAfter: # Activity in window
+                                print nicetime(event["time"]/1000), "PIR event in windowAfter     -> stayed in 2 at", nicetime(doorCloseTime/1000) 
+                                doorString1 = doorString1 + "   " + nicehours(doorCloseTime/1000) + ": Door open, didn't leave\n"
+                            if event["time"] >= doorCloseTime + windowAfter:
+                                print nicetime(event["time"]/1000), "PIR event after windowAfter  -> stayed in 3 at", nicetime(doorCloseTime/1000), "but... waited", (event["time"]-doorCloseTime)/1000/60, "mins"
+                                doorString1 = doorString1 + "   " + nicehours(doorCloseTime/1000) + ": Door open, didn't leave (but no activity for " + str((event["time"]-doorCloseTime)/1000/60) + " minutes - asleep?)\n"
+                        elif INOUT == "out" and waiting:
+                            waiting = False
+                            print nicetime(event["time"]/1000), "PIR event in windowAfter     -> came in at", nicetime(doorCloseTime/1000), "waited", (event["time"]-doorCloseTime)/1000/60, "mins"
+                            doorString1 = doorString1 + "   " + nicehours(doorCloseTime/1000) + ": Door open, came in\n"
+                            INOUT = "in"
+                        elif INOUT == "unknown" and waiting:
+                            waiting = False
+                            print nicetime(event["time"]/1000), "PIR event in windowAfter     -> came in at", nicetime(doorCloseTime/1000), "waited", (event["time"]-doorCloseTime)/1000/60, "mins - unknown IO"
+                            doorString1 = doorString1 + "   " + nicehours(doorCloseTime/1000) + ": Door open, came in\n"
+                            INOUT = "in"
+                    elif INOUT == "unknown":
+                        print nicetime(event["time"]/1000), "unknown IO - PIR event setting it"
+                        INOUT = "in"
+
+        if waiting:
+            print nicetime(doorCloseTime/1000), "went out, not back before 6am"
+            doorString1 = doorString1 + "   " + nicehours(doorCloseTime/1000) + ": Door open, went out - not back before 6am\n"
+
+        #if not openings:
+        #    doorString = doorString + "   " + "No door openings found\n"
+        
+        """
+        # old doors - entry/exit 
         frontDoorOpen = False
         openTime = 0
         closeTime = 0
         openings = False
         windowAfter  = 1000*25*oneMinute 
         windowBefore = 1000*10*oneMinute 
-        fridgeString = ""
         doorString = "\nFront Door\n"
         status = "unknown"
-        fridgeOpenTime = 0 
-        fridgeCloseTime = 0
-        fridgeDoorOpen = False
         for doorEvent in doorSeries:
             #print "next door pt is", doorEvent["value"], "at", nicetime(doorEvent["time"]/1000), "on", doorEvent["door"]
             errorInData = False
@@ -212,8 +304,8 @@ def dyh (user, password, bid, to, db, daysago):
                                 #print "Door opened again within windowAfter/2 at", nicetime(doorEvent1["time"]/1000), "cancel next event"
                                 cancelDoorEvent = True
                     if (closeTime - openTime)/1000 >= 6*oneMinute and (closeTime - openTime)/1000 <= 8*oneHour: # if it's open for longer then the window's meaningless
-                        doorString =  doorString + "   " + nicehours(openTime/1000) + ": Warning door was open for " + str((closeTime - openTime)/1000/60) + " minutes\n"
-                        print "WARNING door was open for", (closeTime - openTime)/1000/60, "minutes, from", nicetime(openTime/1000)
+                        doorString =  doorString + "   " + nicehours(closeTime/1000) + ": Warning door was open for " + str((closeTime - openTime)/1000/60) + " minutes\n"
+                        #print "WARNING door was open for", (closeTime - openTime)/1000/60, "minutes, from", nicetime(openTime/1000)
                     elif not errorInData and not cancelDoorEvent: # N.B. we get here after the door is closed
                         activeAfter = False
                         activeBefore = False
@@ -238,24 +330,32 @@ def dyh (user, password, bid, to, db, daysago):
                             if status == "in":
                                 print "Door was open for", (closeTime - openTime)/1000, "seconds at", nicetime(openTime/1000), ": Came in again???"
                             else:
-                                doorString = doorString + "   " + nicehours(openTime/1000) + ": Door open, came in\n"
-                                print "Door was open for", (closeTime - openTime)/1000, "seconds at", nicetime(openTime/1000), ": Came in"
+                                doorString = doorString + "   " + nicehours(closeTime/1000) + ": Door open, came in\n"
+                                #print "Door was open for", (closeTime - openTime)/1000, "seconds at", nicetime(openTime/1000), ": Came in"
                             status = "in"
                         elif activeBefore and not activeAfter:
                             if status == "out":
                                 print "Door was open for ", (closeTime - openTime)/1000, " seconds at ", nicetime(openTime/1000), ": Went out again??"
                             else:
-                                print "Door was open for ", (closeTime - openTime)/1000, " seconds at ", nicetime(openTime/1000), ": Went out or asleep in", lastSensor
-                                doorString = doorString + "   " + nicehours(openTime/1000) + ": Door open, went out (no activity for 25mins)\n"
+                                #print "Door was open for ", (closeTime - openTime)/1000, " seconds at ", nicetime(openTime/1000), ": Went out or asleep in", lastSensor
+                                doorString = doorString + "   " + nicehours(closeTime/1000) + ": Door open, went out (no activity for 25mins)\n"
                             status = "out"
                         elif activeBefore and activeAfter:
                             status = "in"
-                            print "Door was open for", (closeTime - openTime)/1000, " seconds at ", nicetime(openTime/1000), ": Didn't leave"
-                            doorString = doorString + "   " + nicehours(openTime/1000) + ": Door open, didn't leave\n"
+                            #print "Door was open for", (closeTime - openTime)/1000, " seconds at ", nicetime(openTime/1000), ": Didn't leave"
+                            doorString = doorString + "   " + nicehours(closeTime/1000) + ": Door open, didn't leave\n"
                         else:
                             status = "unknown"
                             print "Impossible door opening"
-            elif "fridge" in doorEvent["door"].lower():
+        """
+
+        # fridge door
+        fridgeOpenTime = 0 
+        fridgeCloseTime = 0
+        fridgeDoorOpen = False
+        fridgeString = ""
+        for doorEvent in doorSeries:
+            if "fridge" in doorEvent["door"].lower():
                 if doorEvent["value"] == 1:
                     fridgeOpenTime = doorEvent["time"]
                     if fridgeDoorOpen:
@@ -273,12 +373,10 @@ def dyh (user, password, bid, to, db, daysago):
                     if not fridgeDoorOpen:
                         print nicetime(fridgeCloseTime/1000), "Fridge gone from closed to closed"
                     fridgeDoorOpen = False
-
-        if not openings:
-            doorString = doorString + "   " + "No door openings found\n"
         if fridgeDoorOpen:
             print "  Fridge door still open from", nicetime(fridgeOpenTime/1000), "?"
             fridgeString = fridgeString + "   Was the fridge door left open at " +  nicehours(fridgeOpenTime/1000) + "?\n" 
+
 
         # uptime
         upCount = 0
@@ -498,7 +596,7 @@ def dyh (user, password, bid, to, db, daysago):
                 else:
                     wanderString = wanderString + nicehours(x/1000) + ", "
                 
-
+        """
         #print "nightCount:", nightCount, "bwCount:", bedroomWanderCount
         if nightCount > 10 and bedroomWanderCount > nightCount*0.7:
             bedtimeString = bedtimeString + ". Disturbed night - mostly in bedroom\n"
@@ -510,7 +608,8 @@ def dyh (user, password, bid, to, db, daysago):
             bedtimeString = bedtimeString + ". Disturbed night\n"
             print "Looks like a disturbed night, count = ", nightCount, "BrmCnt =", bedroomWanderCount
         else:
-            bedtimeString = bedtimeString + "\n"
+        """
+        bedtimeString = bedtimeString + "\n"
         
 
         # Appliances
@@ -604,7 +703,7 @@ def dyh (user, password, bid, to, db, daysago):
                     toasterOnTime = app["time"]
             if "washer" in app["name"].lower():
                 if app["power"] > 200:
-                    if app["time"] > washerOnTime + 5*oneMinute*1000:
+                    if app["time"] > washerOnTime + 15*oneMinute*1000:
                         washerOnTimes.append(app["time"])
                         print "washer on at", nicehours(app["time"]/1000), "power:", app["power"]
                     washerOnTime = app["time"]
@@ -622,13 +721,13 @@ def dyh (user, password, bid, to, db, daysago):
                     #print "Kettle on at", nicehours(app["time"]/1000), "power:", app["power"]
             if "oven" in app["name"].lower():
                 if app["power"] > 300:
-                    if app["time"] > ovenOnTime + 5*oneMinute*1000:
+                    if app["time"] > ovenOnTime + 10*oneMinute*1000:
                         print "oven on at", nicehours(app["time"]/1000), "power:", app["power"]
                         ovenOnTimes.append(app["time"])
                     ovenOnTime = app["time"]
             if "cooker" in app["name"].lower():
                 if app["power"] > 300:
-                    if app["time"] > cookerOnTime + 5*oneMinute*1000:
+                    if app["time"] > cookerOnTime + 10*oneMinute*1000:
                         print "cooker on at", nicehours(app["time"]/1000), "power:", app["power"]
                         cookerOnTimes.append(app["time"])
                     cookerOnTime = app["time"]
@@ -721,10 +820,11 @@ def dyh (user, password, bid, to, db, daysago):
 
 
 
-    Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + fridgeString + bedtimeString + busyString + wanderString + doorString + "\n"
+    Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + fridgeString + bedtimeString + busyString + wanderString + doorString1 + "\n"
+    #Text = Text + doorString + doorString1 + "\n"
     print Text
     
-    exit()
+    #exit()
     # Create message container - the correct MIME type is multipart/alternative.
     try:
         msg = MIMEMultipart('alternative')
@@ -743,7 +843,6 @@ def dyh (user, password, bid, to, db, daysago):
         part1 = MIMEText(Text, 'plain')
         #part2 = MIMEText(htmlText, 'html')
     
-        # Define the image's ID as referenced above
         msg.attach(part1)
         #msg.attach(part2)
         mail = smtplib.SMTP('smtp.gmail.com', 587)
