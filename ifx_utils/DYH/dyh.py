@@ -848,7 +848,7 @@ def dyh (user, password, bid, to, db, daysago):
     #Text = Text + doorString + doorString1 + "\n"
     print Text
     
-    exit()
+    #exit()
     # Create message container - the correct MIME type is multipart/alternative.
     try:
         msg = MIMEMultipart('alternative')
