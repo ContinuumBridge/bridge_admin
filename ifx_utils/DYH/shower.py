@@ -90,64 +90,99 @@ def shower (bid, db, daysago):
         print "Requesting list of series from", nicetime(startTime), "to", nicetime(endTime)
         url = dburl + "db/" + db + "/series?u=root&p=27ff25609da60f2d&" + query 
         print "fetching from:", url
-        r = requests.get(url)
-        pts = r.json()
-        #print json.dumps(r.json(), indent=4)
+        try:
+            r = requests.get(url)
+            pts = r.json()
+        except:
+            print "Fetch failed"
+            exit()
     
+        sensorList = []
         selectedSeries = []
         bathroomSeries = []
         prevItem = 0
         for series in pts:
-            if "bathroom" in series["name"].lower() and "wander" not in series["name"].lower() and "battery" not in series["name"].lower() and "connected" not in series["name"].lower(): 
-               selectedSeries.append(series)
+            if "humidity" in series["name"].lower(): 
+                if getsensor(series["name"]) not in sensorList:
+                   sensorList.append(getsensor(series["name"]))
+        print "sensorlist:", sensorList
+
+        for s in sensorList:
+            for series in pts:
+                if s in series["name"]: 
+                    selectedSeries.append(series)
         for item in selectedSeries:
             for pt in item["points"]:
                 bathroomSeries.append({"time":pt[0],  "name": item["name"], "value": pt[2]})
-
-
         bathroomSeries.sort(key=operator.itemgetter('time'))
         #print "bS:", json.dumps(bathroomSeries,indent=4)
 	
         showerStart = 0
-        showerWindow = 20*oneMinute
-        prevJ = 0
-        showerTaken = False
-        showerTimes =[] 
-        for j in bathroomSeries:
-            if j == prevJ:
-                print "ignoring duplicate at:", nicetime(j["time"]/1000), j["time"], j["value"], j["name"]
-            else:
-                if "binary" in j["name"] and j["value"] == 1 and j["time"] > showerStart: # + showerWindow*1000: # door or PIR
-                    print "NextJ:", nicetime(j["time"]/1000), j["value"], "on", j["name"]
-                    firstLoop = True
-                    showerStart = j["time"]
-                    prevH = 0
-                    prevK = 0
-                    prevT = 0
-                    humGrad = 0.0
-                    for k in bathroomSeries:
-                        if "humidity" in k["name"] and k["time"] >= showerStart and k["time"] <= showerStart + showerWindow*1000: # and not showerTaken:
-                            print "  NextHK:", nicetime(k["time"]/1000), k["value"], "on", k["name"]
-                            if k <> prevK:
-                                #print "   ", nicetime(k["time"]/1000),"Humidity values this:", k["value"], "prev:", prevH
-                                if not firstLoop:
-                                    humGrad = 100000*(k["value"] - prevH)/float(k["time"] - prevT)
-                                    #print "      ", nicetime(k["time"]/1000), "change is:", k["value"] - prevH, "over", k["time"]/1000 - prevT/1000 , "seconds"
-                                    if humGrad > 2.0:
-                                        #showerTaken = True
-                                        #print "Upgrad=", humGrad
-                                        showerTimes.append(k["time"]) 
-                                        print "** Shower at:", nicehours(k["time"]/1000), "moving start from", nicehours(showerStart/1000), "to", nicehours((showerStart + showerWindow*1000)/1000)
-                                        showerStart = showerStart + showerWindow*1000
-                                firstLoop = False
-                                prevH = k["value"]
-                                prevT = k["time"]
-                                prevK = k
-        #for m in showerTimes:
-        #    print "Showers:", nicetime(m/1000)
+        showerWindow = 30*oneMinute*1000
+        for s in sensorList:
+            print "next s", s
+            prevJ = 0
+            prevH = 0
+            prevT = 0
+            startT = 0
+            checking = False
+            startH = 0
+            deltaT = 1
+            deltaJ = 0.0
+            gradH = 0.0
+            prevG = 0.0
+            showerDebug = False
+            for j in bathroomSeries:
+                if s in j["name"]:
+                    if j <> prevJ:
+                        if "binary" in j["name"].lower() and j["value"] == 1:
+                            showerStart = j["time"]
+                            #print nicetime(j["time"]/1000), s, "is occupied", "on", j["name"]
+                
+                        if "humidity" in j["name"]: # and j["time"] < showerStart + showerWindow:
+                            if prevH <> 0:
+                                if showerDebug:
+                                    print nicetime(j["time"]/1000),"H:", j["value"] 
+                                deltaT = (j["time"] - prevT)
+                                deltaH = j["value"] - prevH
+                                gradH = 100000.0*deltaH/deltaT
+                                if gradH>0.02:
+                                    if showerDebug:
+                                        print "grad=", gradH
+                                #if gradH > 0.5: 
+                                    #print nicetime(j["time"]/1000),"Humidity gone up by", j["value"] - prevH, "to", j["value"], "in", (j["time"]-prevT)/1000, "seconds, G:", gradH 
+                                    prevG = gradH
+                                    if not checking:
+                                        startT = prevT 
+                                        startH = prevH
+                                        if showerDebug:
+                                            print nicetime(j["time"]/1000),"   Started Checking from", nicetime(startT/1000), "thisH:", j["value"], "prev:", prevH
+                                    checking = True
+                                else:
+                                    #print s, nicetime(j["time"]/1000),"Humidity gone down by", j["value"] - prevH, "in", (j["time"]-prevT)/1000, "seconds"
+                                    if checking:
+                                        if showerDebug:
+                                            print nicetime(j["time"]/1000), "   end of checking - humidity went up by", prevH - startH, "in", (prevT - startT)/1000/60, "minutes"
+                                        if prevG>1.1 or ((prevH-startH) >= 9 and (prevT-startT) < 45*oneMinute*1000):
+                                            print  nicetime(j["time"]/1000), "*** Shower at", nicetime(startT/1000)
+                                    checking = False
+                                """
+                                if j["value"] > prevH: # less than 2 is noise
+                                    if j["value"] - prevH <=2 and j["time"]-prevT > 10*oneMinute*1000:
+                                        print s, nicetime(j["time"]/1000),"Humidity only gone up by", j["value"] - prevH, "to", j["value"], "in", (j["time"]-prevT)/1000, "seconds - ignoring"
+                                    else:
+                                        if not checking:
+                                            startT = prevT 
+                                            startH = prevH
+                                            print s, nicetime(j["time"]/1000), "startH:", startH, "startT", nicetime(startT/1000)
+                                        checking = True
+                                """
+                            prevH = j["value"]
+                            prevT = j["time"]
 
-
-            prevJ = j
+                prevJ = j
+            #else:
+            #    print "ignoring duplicate at:", nicetime(j["time"]/1000), j["time"], j["value"], j["name"]
            
 
                   
