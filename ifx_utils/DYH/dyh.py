@@ -844,7 +844,7 @@ def dyh (user, password, bid, to, db, daysago):
     try:
         msg = MIMEMultipart('alternative')
         #msg['Subject'] = "Activity for bridge "+bid+" from "+nicedate(startTime)+" to "+nicedate(endTime)+" (InfluxDB/"+db+")"
-        msg['Subject'] = "Activity for DYH bungalow from "+nicedate(startTime)+" to "+nicedate(endTime)
+        msg['Subject'] = "Activity for DYH bungalow from 6am "+nicedate(startTime)
         msg['From'] = "Bridges <bridges@continuumbridge.com>"
         recipients = to.split(',')
         [p.strip(' ') for p in recipients]
