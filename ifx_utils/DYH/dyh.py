@@ -82,7 +82,7 @@ def getsensor (ss):
 
 def dyh (user, password, bid, to, db, daysago):
     daysAgo = int(daysago) #0 # 0 means yesterday
-    startTime = start() - oneDay - daysAgo*60*60*24
+    startTime = start() - daysAgo*60*60*24
     endTime = startTime + oneDay
     #indeces
     i_time = 0
@@ -108,10 +108,9 @@ def dyh (user, password, bid, to, db, daysago):
         r = requests.get(url)
         pts = r.json()
         #print json.dumps(r.json(), indent=4)
-    
+
         Text = "\nSummary of " + nicedate(startTime) + " from 6am\n"
         selectedSeries = []
-        #allPIRSeries = [[] for x in xrange(0,4)]
         allPIRSeries = []
         wanderSeries = []
         powerSeries = []
@@ -124,8 +123,6 @@ def dyh (user, password, bid, to, db, daysago):
             if "wander" in series["name"].lower() or "power" in series["name"].lower() or "pir" in series["name"].lower() and "binary" in series["name"].lower() or "tv" in series["name"].lower() or ("door" in series["name"].lower() and "binary" in series["name"].lower()): 
 # and not "outside" in series["name"].lower():
                selectedSeries.append(series)
-
-        #print json.dumps(pts, indent=4)
 
         for item in selectedSeries:
             if "pir" in item["name"].lower() and not "wander" in item["name"].lower():
@@ -168,17 +165,7 @@ def dyh (user, password, bid, to, db, daysago):
         wanderSeries.sort(key=operator.itemgetter('time'))
         inOutSeries.sort(key=operator.itemgetter('time'))
 
-        """
-        prevTime = 0
-        prevRoom = "loo"
-        for j in allPIRSeries:
-            if j["time"] == prevTime and j["room"] == prevRoom:
-                print "duplicate at:", nicetime(j["time"]/1000), j["time"], j["value"], j["room"]
-            prevTime = j["time"]
-            prevRoom = j["room"]
-        """
-
-        # New doors - solving magically re-appearing resident!
+        # New doors - solving the magically re-appearing resident!
         doorString1 = "\nFront Door\n"
         INOUT = "unknown"
         doorCloseTime = 0
@@ -188,6 +175,7 @@ def dyh (user, password, bid, to, db, daysago):
         waiting = False
         prevEvent = {}
         doorDebug = False
+        openings = False
         for event in inOutSeries:
             if event == prevEvent:
                 print nicetime(event["time"]/1000), "*** ignoring duplicate event on", event["name"]
@@ -209,6 +197,7 @@ def dyh (user, password, bid, to, db, daysago):
                     #print nicetime(event["time"]/1000), "Door Opened, IO:", INOUT
                     if doorOpen:
                         print nicetime(event["time"]/1000), "WARNING: door gone from open to open"
+                    openings = True
                     doorOpen = True
                     doorOpenTime = event["time"]
                     if doorCloseTime <> 0:
@@ -275,9 +264,9 @@ def dyh (user, password, bid, to, db, daysago):
             if doorDebug:
                 print nicetime(doorCloseTime/1000), "went out, not back before 6am"
             doorString1 = doorString1 + "   " + nicehours(doorCloseTime/1000) + ": Door open, went out - not back before 6am\n"
+        if not openings:
+            doorString1 = doorString1 + "   " + "No door openings found\n"
 
-        #if not openings:
-        #    doorString = doorString + "   " + "No door openings found\n"
         
         """
         # old doors - entry/exit 
@@ -359,6 +348,8 @@ def dyh (user, password, bid, to, db, daysago):
                         else:
                             status = "unknown"
                             print "Impossible door opening"
+        if not openings:
+            doorString = doorString + "   " + "No door openings found\n"
         """
 
         # fridge door
@@ -366,7 +357,7 @@ def dyh (user, password, bid, to, db, daysago):
         fridgeCloseTime = 0
         fridgeDoorOpen = False
         fridgeString = ""
-        fridgeDebug = False
+        fridgeDebug = True
         prevDoorEvent = {}
         for doorEvent in doorSeries:
             if "fridge" in doorEvent["door"].lower():
