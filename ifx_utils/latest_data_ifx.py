@@ -48,12 +48,17 @@ def epochtime(date_time):
 
 
 def latest_data (bid, db):
+
     allBridges = 0
     if not bid:
         print "No BID specified - checking all"
         allBridges = 1
         query = urllib.urlencode ({'q':'select * from /BID*/ limit 1'})
     else:
+        print "Use ./latest_data.py"
+        print "Unless you want a summary of all bridges"
+        print "In which case make bid empty"
+        exit()
         q = "select * from /" + bid + "/ limit 1"
         query = urllib.urlencode ({'q':q})
 
@@ -85,7 +90,7 @@ def latest_data (bid, db):
             if (now - latest_time)/oneDay ==0:
                 print nicetime(latest_time), "( ", (now-latest_time)/(60*60), "hours ago) is latest data in", db,  "for", latestPoints[i]['name'] 
             else:
-                print nicetime(latest_time), "(*", (now - latest_time)/oneDay, "days ago) is latest data in", db, "for", latestPoints[i]['name'] 
+                print nicetime(latest_time), "(*", (now - latest_time)/oneDay, "days ago ) is latest data in", db, "for", latestPoints[i]['name'] 
         else: # looping on all sensors on all bridges
             bridge = latestPoints[i]["name"].split('/')        
             lastBridge = latestPoints[-1]["name"].split('/')        
