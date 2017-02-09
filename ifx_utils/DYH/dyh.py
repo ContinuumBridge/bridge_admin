@@ -22,7 +22,6 @@ import os, sys
 import re
 import smtplib
 import operator
-import operator
 from itertools import cycle
 import urllib
 from email.mime.multipart import MIMEMultipart
