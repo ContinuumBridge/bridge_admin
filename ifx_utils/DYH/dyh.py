@@ -564,7 +564,7 @@ def dyh (user, password, bid, to, db, daysago):
         kettleOnTimes = []
         kettleString = ""
         kettleOnTime = 0
-        kettleOn = False
+        kettleOn = True # just for the 14th
 
         microOnTimes = []
         microOnTime = 0
@@ -596,7 +596,8 @@ def dyh (user, password, bid, to, db, daysago):
                 if app["power"] > 1000:
                     if app["time"] > kettleOnTime + 5*oneMinute*1000:
                         if kettleOn: # Odd behaviour on the kettle - doesn't always go off in between ons, Probably due to zwave reset
-                            print "WARNING: Kettle already on at", nicehours(app["time"]/1000), "power:", app["power"], "ignoring"
+                            print "WARNING: Kettle already on at", nicehours(app["time"]/1000), "power:", app["power"], "ignoring and setting to off"
+                            kettleOn = False
                         else:
                             kettleOnTimes.append(app["time"])
                             kettleOn = True
@@ -705,7 +706,8 @@ def dyh (user, password, bid, to, db, daysago):
 
 
 
-    Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + fridgeString + bedtimeString + busyString + wanderString + doorString1 + "\n"
+    #Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + fridgeString + bedtimeString + busyString + wanderString + doorString1 + "\n"
+    Text = Text + uptimeString + teleString + microString + washerString + ovenString + cookerString + fridgeString + bedtimeString + busyString + wanderString + doorString1 + "\n"
     #Text = Text + doorString + doorString1 + "\n"
     print Text
     
