@@ -564,6 +564,7 @@ def dyh (user, password, bid, to, db, daysago):
         kettleOnTimes = []
         kettleString = ""
         kettleOnTime = 0
+        prevKettlePower = -1
         kettleOn = True # just for the 14th
 
         microOnTimes = []
@@ -593,7 +594,9 @@ def dyh (user, password, bid, to, db, daysago):
                         #print "microwave on at", nicehours(app["time"]/1000), "power:", app["power"]
                     microOnTime = app["time"]
             if "kettle" in app["name"].lower():
-                if app["power"] > 1000:
+                if app["power"] == prevKettlePower:
+                    print "Kettle point", nicehours(app["time"]/1000), "kettle point ignored. Power:", app["power"]
+                elif app["power"] > 1000:
                     if app["time"] > kettleOnTime + 5*oneMinute*1000:
                         if kettleOn: # Odd behaviour on the kettle - doesn't always go off in between ons, Probably due to zwave reset
                             print "WARNING: Kettle already on at", nicehours(app["time"]/1000), "power:", app["power"], "ignoring and setting to off"
@@ -605,6 +608,7 @@ def dyh (user, password, bid, to, db, daysago):
                     kettleOnTime = app["time"]
                 else:
                     kettleOn = False
+                prevKettlePower = app["power"]
             if "oven" in app["name"].lower():
                 if app["power"] > 300:
                     if app["time"] > ovenOnTime + 10*oneMinute*1000:
@@ -629,8 +633,8 @@ def dyh (user, password, bid, to, db, daysago):
                 print "  Kettle on at", nicehours(i/1000)
             #kettleString = kettleString + "\n"
         else:
-            kettleString = "   No kettles\n"
-            print "no kettles"
+            kettleString = "   No kettle data\n"
+            print "no kettle data"
         if microOnTimes:
             microString = "   Microwave on at: "
             for i in microOnTimes:
@@ -701,13 +705,13 @@ def dyh (user, password, bid, to, db, daysago):
                     teleString = teleString + "   Tele on at " + nicehours(teleOnTime/1000) + " for " + str((tele["time"] - teleOnTime)/1000) + " minutes\n" 
                 teleOn = "off"
         if not watched:
-            teleString =  "   No tele\n"
+            teleString =  "   No tele data\n"
 
 
 
 
-    #Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + fridgeString + bedtimeString + busyString + wanderString + doorString1 + "\n"
-    Text = Text + uptimeString + teleString + microString + washerString + ovenString + cookerString + fridgeString + bedtimeString + busyString + wanderString + doorString1 + "\n"
+    Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + fridgeString + bedtimeString + busyString + wanderString + doorString1 + "\n"
+    #Text = Text + uptimeString + teleString + microString + washerString + ovenString + cookerString + fridgeString + bedtimeString + busyString + wanderString + doorString1 + "\n"
     #Text = Text + doorString + doorString1 + "\n"
     print Text
     
