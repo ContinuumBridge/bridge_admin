@@ -564,6 +564,7 @@ def dyh (user, password, bid, to, db, daysago):
         kettleOnTimes = []
         kettleString = ""
         kettleOnTime = 0
+        kettleOn = False
 
         microOnTimes = []
         microOnTime = 0
@@ -594,9 +595,15 @@ def dyh (user, password, bid, to, db, daysago):
             if "kettle" in app["name"].lower():
                 if app["power"] > 1000:
                     if app["time"] > kettleOnTime + 5*oneMinute*1000:
-                        kettleOnTimes.append(app["time"])
-                        #print "Kettle on at", nicehours(app["time"]/1000), "power:", app["power"]
+                        if kettleOn: # Odd behaviour on the kettle - doesn't always go off in between ons, Probably due to zwave reset
+                            print "WARNING: Kettle already on at", nicehours(app["time"]/1000), "power:", app["power"], "ignoring"
+                        else:
+                            kettleOnTimes.append(app["time"])
+                            kettleOn = True
+                            print "Kettle on at", nicehours(app["time"]/1000), "power:", app["power"]
                     kettleOnTime = app["time"]
+                else:
+                    kettleOn = False
             if "oven" in app["name"].lower():
                 if app["power"] > 300:
                     if app["time"] > ovenOnTime + 10*oneMinute*1000:
