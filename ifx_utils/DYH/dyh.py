@@ -86,9 +86,13 @@ def dyh (user, password, bid, to, db, daysago):
     #indeces
     i_time = 0
     i_data = 2
+    D = {}
 
     print "start time:", nicetime(startTime)
     print "end time:", nicetime(endTime)
+    D["BID"] = bid
+    D["start time:"] = nicetime(startTime)
+    D["end time"] = nicetime(endTime)
  
     if not bid:
         print "You must provide a bridge ID using the --bid option."
@@ -119,8 +123,12 @@ def dyh (user, password, bid, to, db, daysago):
         roomCount = 0
         roomState = "empty"
         for series in pts:
-            if "wander" in series["name"].lower() or "power" in series["name"].lower() or "pir" in series["name"].lower() and "binary" in series["name"].lower() or "tv" in series["name"].lower() or ("door" in series["name"].lower() and "binary" in series["name"].lower()): 
-# and not "outside" in series["name"].lower():
+            if ("wander" in series["name"].lower() 
+                or "power" in series["name"].lower() 
+                or ("pir" in series["name"].lower() and "binary" in series["name"].lower())
+                or "tv" in series["name"].lower() 
+                or ("door" in series["name"].lower() and "binary" in series["name"].lower())): 
+            # and not "outside" in series["name"].lower():
                selectedSeries.append(series)
 
         for item in selectedSeries:
@@ -174,6 +182,7 @@ def dyh (user, password, bid, to, db, daysago):
         waiting = False
         prevEvent = {}
         openings = False
+        doorList = []
         doorDebug = False
         for event in inOutSeries:
             if event == prevEvent:
@@ -207,10 +216,12 @@ def dyh (user, password, bid, to, db, daysago):
                                 if doorDebug:
                                     print nicetime(event["time"]/1000), "IN: Door opened in window    -> stayed 1 in at", nicetime(doorCloseTime/1000)
                                 doorString1 = doorString1 + "   " + nicehours(doorCloseTime/1000) + ": Door open, didn't leave\n"
+                                doorList.append({nicehours(doorCloseTime/1000):"Door open, didn't leave"}) 
                             elif event["time"] >= doorCloseTime + windowAfter:
                                 if doorDebug:
                                     print nicetime(event["time"]/1000), "IN: Door opened after window -> went out at", nicetime(doorCloseTime/1000), "waited", (event["time"]-doorCloseTime)/1000/60, "minutes"
                                 doorString1 = doorString1 + "   " + nicehours(doorCloseTime/1000) + ": Door open, went out\n"
+                                doorList.append({nicehours(doorCloseTime/1000):"Door open, went out"}) 
                                 INOUT = "out"
                             else:
                                 print "IN: Door opened sometime"
@@ -223,6 +234,7 @@ def dyh (user, password, bid, to, db, daysago):
                                 if doorDebug:
                                     print nicetime(event["time"]/1000), "OUT: Door opened after window -> didn't come in at", nicetime(doorCloseTime/1000), "waited", (event["time"]-doorCloseTime)/1000/60, "mins"
                                 doorString1 = doorString1 + "   " + nicehours(doorCloesTime/1000) + ": Door open, didn't come in\n"
+                                doorList.append({nicehours(doorCloseTime/1000):"Door open, didn't come in"}) 
                                 INOUT = "out"
                             else:
                                 print "OUT: Door opened sometime"
@@ -237,9 +249,6 @@ def dyh (user, password, bid, to, db, daysago):
                         INOUT = "out"
 
 
-
-
-
                 elif "pir" in event["name"].lower() and event["value"] == 1:
                     lastActivityTime = event["time"]
                     if doorCloseTime <> 0:
@@ -249,21 +258,25 @@ def dyh (user, password, bid, to, db, daysago):
                                 if doorDebug:
                                     print nicetime(event["time"]/1000), "PIR event in windowAfter     -> stayed in 2 at", nicetime(doorCloseTime/1000) 
                                 doorString1 = doorString1 + "   " + nicehours(doorCloseTime/1000) + ": Door open, didn't leave\n"
+                                doorList.append({nicehours(doorCloseTime/1000):"Door open, didn't leave"}) 
                             if event["time"] >= doorCloseTime + windowAfter:
                                 if doorDebug:
                                     print nicetime(event["time"]/1000), "PIR event after windowAfter  -> stayed in 3 at", nicetime(doorCloseTime/1000), "but... waited", (event["time"]-doorCloseTime)/1000/60, "mins"
                                 doorString1 = doorString1 + "   " + nicehours(doorCloseTime/1000) + ": Door open, didn't leave (but no activity for " + str((event["time"]-doorCloseTime)/1000/60) + " minutes - asleep?)\n"
+                                doorList.append({nicehours(doorCloseTime/1000):"Door open, didn't leave (bit no activity for " + str((event["time"]-doorCloseTime)/1000/60) + " minutes - asleep?)"}) 
                         elif INOUT == "out" and waiting:
                             waiting = False
                             if doorDebug:
                                 print nicetime(event["time"]/1000), "PIR event in windowAfter     -> came in at", nicetime(doorCloseTime/1000), "waited", (event["time"]-doorCloseTime)/1000/60, "mins"
                             doorString1 = doorString1 + "   " + nicehours(doorCloseTime/1000) + ": Door open, came in\n"
+                            doorList.append({nicehours(doorCloseTime/1000):"Door open, came in"}) 
                             INOUT = "in"
                         elif INOUT == "unknown" and waiting:
                             waiting = False
                             if doorDebug:
                                 print nicetime(event["time"]/1000), "PIR event in windowAfter     -> came in at", nicetime(doorCloseTime/1000), "waited", (event["time"]-doorCloseTime)/1000/60, "mins - unknown IO"
                             doorString1 = doorString1 + "   " + nicehours(doorCloseTime/1000) + ": Door open, came in\n"
+                            doorList.append({nicehours(doorCloseTime/1000):"Door open, came in"}) 
                             INOUT = "in"
                     elif INOUT == "unknown":
                         if doorDebug:
@@ -274,10 +287,13 @@ def dyh (user, password, bid, to, db, daysago):
             if doorDebug:
                 print nicetime(doorCloseTime/1000), "went out, not back before 6am"
             doorString1 = doorString1 + "   " + nicehours(doorCloseTime/1000) + ": Door open, went out - not back before 6am\n"
+            doorList.append({nicehours(doorCloseTime/1000):"Door open, , went out - not back before 6am"}) 
         if not openings:
             doorString1 = doorString1 + "   " + "No door openings found\n"
 
-        
+        D["Front Door"] = doorList
+        #print "Doors:", json.dumps(doorList, indent=4)
+
         # fridge door
         fridgeOpenTime = 0 
         fridgeCloseTime = 0
@@ -328,7 +344,10 @@ def dyh (user, password, bid, to, db, daysago):
         uptimeDebug = False
         for ptx in allPIRSeries:
             if ptx["value"] == 1:
-                if ptx["time"]/1000 > startTime and ptx["time"]/1000 < startTime +6*oneHour and "bed" not in ptx["room"].lower() and not gotUp:
+                if (ptx["time"]/1000 > startTime 
+                    and ptx["time"]/1000 < startTime +6*oneHour 
+                    and "bed" not in ptx["room"].lower() 
+                    and not gotUp):
                     if uptimeDebug:
                         print nicetime(ptx["time"]/1000), "Morning activity x in", ptx["room"]
                     gotUpTime = ptx["time"]
@@ -346,6 +365,7 @@ def dyh (user, password, bid, to, db, daysago):
                                 doorCount+=1
                     if upCount >= 6 or (upCount >=4 and doorCount >= 2):
                         uptimeString = "   Got up at " + nicehours(gotUpTime/1000) + "\n"
+                        D["gotUpTime"] = nicehours(gotUpTime/1000)
                         print "Got up at", nicehours(gotUpTime/1000), "35min PIR count = ", upCount, "door=", doorCount
                         gotUp = True
                     else:
@@ -354,6 +374,7 @@ def dyh (user, password, bid, to, db, daysago):
                         doorCount = 0
         if not gotUp:   
             uptimeString = "   Can't find getting up time\n"
+            D["gotUpTime"] = "Can't find getting up time"
             print "not got up yet by", nicetime(ptx["time"]/1000)
         
         #busyness - just count the ones 
@@ -368,10 +389,15 @@ def dyh (user, password, bid, to, db, daysago):
         nightCount = 0
         bedroomWanderCount = 0
         latestOne = {}
+        A = {}
         inBed = False
         prevprString = "foo"
         bedtimeString = "   Can't find bedtime"
         busyString = "\nActivity levels\n"
+        mTotal = 0
+        aTotal = 0
+        eTotal = 0
+        nTotal = 0
         print "\n\nDay:", nicedate(slot)
         while slot < endTime:
             K = 0
@@ -421,6 +447,7 @@ def dyh (user, password, bid, to, db, daysago):
                 else:
                    levelStr = "High"
                 busyString = busyString + "  Morning activity: " + levelStr + " (" + str(bedOnes+K+H+L+b) + ")\n"
+                mTotal = bedOnes+K+H+L+b 
                 print "   Morning activity   =", bedOnes+K+H+L+b 
             elif slotCount == 2:
                 mornThresh = 40
@@ -434,6 +461,8 @@ def dyh (user, password, bid, to, db, daysago):
                    levelStr = "High"
                 print "   Afternoon activity =", bedOnes+K+H+L+b 
                 busyString = busyString + "  Afternoon activity: " + levelStr + " (" + str(bedOnes+K+H+L+b) + ")\n"
+                A["afternoon"] = bedOnes+K+H+L+b 
+                aTotal = bedOnes+K+H+L+b 
             elif slotCount == 3:
                 mornThresh = 40
 		if bedOnes+K+H+L+b == 0:
@@ -446,6 +475,8 @@ def dyh (user, password, bid, to, db, daysago):
                    levelStr = "High"
                 print "   Evening aggregate activity   =", bedOnes+K+H+L+b 
                 busyString = busyString + "  Evening activity:    " + levelStr + " (" + str(bedOnes+K+H+L+b) + ")\n"
+                A["evening"] = bedOnes+K+H+L+b 
+                eTotal = bedOnes+K+H+L+b 
             elif slotCount == 4:
                 nightThresh = 20
 		if bedOnes+K+H+L+b == 0:
@@ -457,6 +488,8 @@ def dyh (user, password, bid, to, db, daysago):
                 else:
                    levelStr = "High"
                 busyString = busyString + "  Night activity:      " + levelStr + " (" + str(bedOnes+K+H+L+b) + ")\n"
+                A["night"] = bedOnes+K+H+L+b 
+                nTotal = bedOnes+K+H+L+b 
                 print "   Night activity     =", bedOnes+K+H+L+b 
                 nightCount = bedOnes+K+H+L+b
                 bedroomWanderCount = bedOnes
@@ -473,20 +506,40 @@ def dyh (user, password, bid, to, db, daysago):
                 busyString = busyString + "     Hall:    " + str(100*H/(bedOnes+K+H+L+b)) + "%\n"
                 busyString = busyString + "     Bathroom:" + str(100*b/(bedOnes+K+H+L+b)) + "%\n"
 
-                print "     ", "Bedroom: ", 100*bedOnes/(bedOnes+K+H+L+b), "%"
-                print "     ", "Lounge:  ", 100*L/(bedOnes+K+H+L+b), "%"
-                print "     ", "Kitchen: ", 100*K/(bedOnes+K+H+L+b), "%"
-                print "     ", "Hall:    ", 100*H/(bedOnes+K+H+L+b), "%"
-                print "     ", "Bathroom:", 100*b/(bedOnes+K+H+L+b), "%"
+                bedPercent = 100*bedOnes/(bedOnes+K+H+L+b)
+                loungePercent = 100*L/(bedOnes+K+H+L+b)
+                kitchenPercent = 100*K/(bedOnes+K+H+L+b)
+                hallPercent =  100*H/(bedOnes+K+H+L+b)
+                bathroomPercent = 100*b/(bedOnes+K+H+L+b)
+                print "     ", "Bedroom: ", bedPercent, "%"
+                print "     ", "Lounge:  ", loungePercent, "%"
+                print "     ", "Kitchen: ", kitchenPercent, "%"
+                print "     ", "Hall:    ", hallPercent, "%"
+                print "     ", "Bathroom:", bathroomPercent, "%"
+                if slotCount == 1:
+                    A["morning"] = [{"activity":bedOnes+K+H+L+b},{"bedPercent":bedPercent},{"loungePercent":loungePercent},
+                        {"kitchenPercent":kitchenPercent},{"hallPercent":hallPercent},{"bathroomPercent":bathroomPercent}]
+                if slotCount == 2:
+                    A["afternoon"] = [{"activity":bedOnes+K+H+L+b},{"bedPercent":bedPercent},{"loungePercent":loungePercent},
+                        {"kitchenPercent":kitchenPercent},{"hallPercent":hallPercent},{"bathroomPercent":bathroomPercent}]
+                if slotCount == 3:
+                    A["evening"] = [{"activity":bedOnes+K+H+L+b},{"bedPercent":bedPercent},{"loungePercent":loungePercent},
+                        {"kitchenPercent":kitchenPercent},{"hallPercent":hallPercent},{"bathroomPercent":bathroomPercent}]
+                if slotCount == 4:
+                    A["night"] = [{"activity":bedOnes+K+H+L+b},{"bedPercent":bedPercent},{"loungePercent":loungePercent},
+                        {"kitchenPercent":kitchenPercent},{"hallPercent":hallPercent},{"bathroomPercent":bathroomPercent}]
                 
             slot = slot + slotSize
+
+        D["activity"] = A
+        #print "A:", json.dumps(A, indent=4)
 
         print "Ignored", dupCount, "duplicate values and", repCount, "non-transitions"
 
         # bedtime
-        light = False
         if latestOne and not inBed: # and no more activity for >30mins
             bedtimeString = "   Went to bed at " + nicehours(latestOne["time"]/1000)
+            D["bedTime"] = nicehours(latestOne["time"]/1000)
             inBed = True
             print "Went to bed at:", nicehours(latestOne["time"]/1000), "from", latestOne["room"]
         else:
@@ -494,9 +547,11 @@ def dyh (user, password, bid, to, db, daysago):
             #else:
         for latestuff in allPIRSeries:
             if latestOne:
-                if latestuff["time"]>latestOne["time"] and latestuff["time"]-latestOne["time"]<oneHour*1000/2 and "Bed" not in latestuff["room"] and latestuff["value"]==1:
+                if (latestuff["time"]>latestOne["time"] 
+                    and latestuff["time"]-latestOne["time"]<oneHour*1000/2 
+                    and "Bed" not in latestuff["room"] 
+                    and latestuff["value"]==1):
                     print "Bedtime may be wrong: activity after bedtime:", nicetime(latestuff["time"]/1000), "in", latestuff["room"]
-
 
         wanderWindow = 15*oneMinute
         firstEventTime = 0
@@ -506,45 +561,46 @@ def dyh (user, password, bid, to, db, daysago):
             for w in wanderSeries:
                 if firstEventTime == 0 and w["value"] == 1 and w["time"] > latestOne["time"] + wanderWindow*1000 and "bedroom" not in w["name"].lower():
                     firstEventTime = w["time"]
-                    wanderTimes.append(firstEventTime)
-                    #print "frst:", nicetime(firstEventTime/1000), "value:", w["value"], "this:", nicetime(w["time"]/1000), "bedtime:", nicetime(latestOne["time"]/1000)
+                    wanderTimes.append(nicehours(firstEventTime/1000))
+                    print "frst:", nicetime(firstEventTime/1000), "value:", w["value"], "this:", nicetime(w["time"]/1000), "bedtime:", nicetime(latestOne["time"]/1000)
                 #else:
                 #    print "missed", w["name"], "value:", w["value"], "at:", nicetime(w["time"]/1000), "bedtime:", nicetime(latestOne["time"]/1000)
 
         if firstEventTime == 0:
+            D["wanders"] = "No wanders outside the bedroom after bedtime"
             wanderString = "No wanders outside the bedroom after bedtime\n"
             print "didn't find any wanders"
         else:
             print "First wander  :", nicetime(firstEventTime/1000)
-            wanderString = "Wanders outside the bedroom at: "
+            wanderString = "Wanders outside the bedroom after bedtime at: "
 
             for w in wanderSeries:
                 if "bedroom" not in w["name"].lower() and w["time"] >= firstEventTime and w["time"] > latestOne["time"]:
                     if w["time"] >= firstEventTime + wanderWindow*1000: 
                         firstEventTime = w["time"]
-                        wanderTimes.append(w["time"])
-                        #print "New wander  :", nicetime(w["time"]/1000), "in", getsensor(w["name"])
+                        wanderTimes.append(nicehours(w["time"]/1000))
+                        print "New wander  :", nicetime(w["time"]/1000), "in", getsensor(w["name"])
                     #else:
                         #print "Other sensors:", nicetime(w["time"]/1000), "in", getsensor(w["name"])
                         #if "bathroom" in w["name"].lower():
                         #    print "found bathroom:", nicetime(w["time"]/1000), "in", getsensor(w["name"])
 
             for x in wanderTimes:
-                print "wanderTimes:", nicetime(x/1000)
+                print "wanderTimes:", x
                 if len(wanderTimes) == 1:
-                    wanderString = wanderString + nicehours(x/1000) + ".\n"
+                    wanderString = wanderString + str(x) + ".\n"
                 elif wanderTimes.index(x) == len(wanderTimes)-1:
-                    wanderString = wanderString + "and " + nicehours(x/1000) + ".\n"
+                    wanderString = wanderString + "and " + str(x) + ".\n"
                 elif wanderTimes.index(x) == len(wanderTimes)-2:
-                    wanderString = wanderString + nicehours(x/1000) + " "
+                    wanderString = wanderString + str(x) + " "
                 else:
-                    wanderString = wanderString + nicehours(x/1000) + ", "
+                    wanderString = wanderString + str(x) + ", "
+            D["wanders"] = wanderTimes
                 
         bedtimeString = bedtimeString + "\n"
         
 
         # Appliances
-        # this first set go "on" multiple times during use
         washerOn = False
         washerOffTime = 0
         washerOnTime = 0
@@ -567,6 +623,10 @@ def dyh (user, password, bid, to, db, daysago):
         prevKettlePower = -1
         kettleOn = True # just for the 14th
 
+        teleOnTimes = []
+        teleOnTime = 0
+        teleString = ""
+
         microOnTimes = []
         microOnTime = 0
         microString = ""
@@ -575,22 +635,28 @@ def dyh (user, password, bid, to, db, daysago):
         toasterOnTime = 0
         toasterString = ""
         for app in powerSeries:
-            if "toaster" in app["name"].lower():
-                if app["power"] > 1000:
-                    if app["time"] > toasterOnTime + 5*oneMinute*1000:
-                        toasterOnTimes.append(app["time"])
-                        #print "toaster on at", nicehours(app["time"]/1000), "power:", app["power"]
-                    toasterOnTime = app["time"]
+            if "oven" in app["name"].lower():
+                if app["power"] > 300:
+                    if app["time"] > ovenOnTime + 10*oneMinute*1000:
+                        ovenOnTimes.append(nicehours(app["time"]/1000))
+                        #print "oven on at", nicehours(app["time"]/1000), "power:", app["power"]
+                    ovenOnTime = app["time"]
+            if "cooker" in app["name"].lower():
+                if app["power"] > 300:
+                    if app["time"] > cookerOnTime + 10*oneMinute*1000:
+                        #print "cooker on at", nicehours(app["time"]/1000), "power:", app["power"]
+                        cookerOnTimes.append(nicehours(app["time"]/1000))
+                    cookerOnTime = app["time"]
             if "washer" in app["name"].lower():
                 if app["power"] > 200:
                     if app["time"] > washerOnTime + 15*oneMinute*1000:
-                        washerOnTimes.append(app["time"])
+                        washerOnTimes.append(nicehours(app["time"]/1000))
                         #print "washer on at", nicehours(app["time"]/1000), "power:", app["power"]
                     washerOnTime = app["time"]
             if "microwave" in app["name"].lower():
                 if app["power"] > 1000:
                     if app["time"] > microOnTime + 5*oneMinute*1000:
-                        microOnTimes.append(app["time"])
+                        microOnTimes.append(nicehours(app["time"]/1000))
                         #print "microwave on at", nicehours(app["time"]/1000), "power:", app["power"]
                     microOnTime = app["time"]
             if "kettle" in app["name"].lower():
@@ -602,112 +668,112 @@ def dyh (user, password, bid, to, db, daysago):
                             print "WARNING: Kettle already on at", nicehours(app["time"]/1000), "power:", app["power"], "ignoring and setting to off"
                             kettleOn = False
                         else:
-                            kettleOnTimes.append(app["time"])
+                            kettleOnTimes.append(nicehours(app["time"]/1000))
                             kettleOn = True
                             print "Kettle on at", nicehours(app["time"]/1000), "power:", app["power"]
                     kettleOnTime = app["time"]
                 else:
                     kettleOn = False
                 prevKettlePower = app["power"]
-            if "oven" in app["name"].lower():
-                if app["power"] > 300:
-                    if app["time"] > ovenOnTime + 10*oneMinute*1000:
-                        ovenOnTimes.append(app["time"])
-                        #print "oven on at", nicehours(app["time"]/1000), "power:", app["power"]
-                    ovenOnTime = app["time"]
-            if "cooker" in app["name"].lower():
-                if app["power"] > 300:
-                    if app["time"] > cookerOnTime + 10*oneMinute*1000:
-                        #print "cooker on at", nicehours(app["time"]/1000), "power:", app["power"]
-                        cookerOnTimes.append(app["time"])
-                    cookerOnTime = app["time"]
+            if "tv" in app["name"].lower():
+                if app["power"] >= 9:
+                    if app["time"] > teleOnTime + 10*oneMinute*1000:
+                        #print "tele on at", nicehours(app["time"]/1000), "power:", app["power"]
+                        teleOnTimes.append(nicehours(app["time"]/1000))
+                    teleOnTime = app["time"]
+            if "toaster" in app["name"].lower():
+                if app["power"] > 1000:
+                    if app["time"] > toasterOnTime + 5*oneMinute*1000:
+                        toasterOnTimes.append(nicehours(app["time"]/1000))
+                        #print "toaster on at", nicehours(app["time"]/1000), "power:", app["power"]
+                    toasterOnTime = app["time"]
 
         if kettleOnTimes:
+            D["kettle"] = kettleOnTimes
             kettleString = "   Kettle on at: "
             for i in kettleOnTimes:
-                kettleString = kettleString + nicehours(i/1000)
+                kettleString = kettleString + i
                 if kettleOnTimes.index(i) < len(kettleOnTimes)-1:
                     kettleString = kettleString + ", "
                 else:
                     kettleString = kettleString + "\n"
-                print "  Kettle on at", nicehours(i/1000)
+                print "  Kettle on at", i
             #kettleString = kettleString + "\n"
         else:
+            D["kettle"] = "No kettle data"
             kettleString = "   No kettle data\n"
             print "no kettle data"
         if microOnTimes:
+            D["microwave"] = microOnTimes
             microString = "   Microwave on at: "
             for i in microOnTimes:
-                microString = microString + nicehours(i/1000) + " "
+                microString = microString + i + " "
                 if microOnTimes.index(i) < len(microOnTimes)-1:
                     microString = microString + ", "
                 else:
                     microString = microString + "\n"
-                print "  Microwave on at", nicehours(i/1000)
+                print "  Microwave on at", i
         else:
+            D["microwave"] = "No microwave data"
             microString = "   No microwave\n"
             print "no microwave"
         if washerOnTimes:
+            D["washer"] = washerOnTimes
             washerString = "   Washer on at: "
             for i in washerOnTimes:
-                washerString = washerString + nicehours(i/1000) + " "
+                washerString = washerString + i + " "
                 if washerOnTimes.index(i) < len(washerOnTimes)-1:
                     washerString = washerString + ", "
                 else:
                     washerString = washerString + "\n"
-                print "  Washer on at", nicehours(i/1000)
+                print "  Washer on at", i
         else:
+            D["washer"] = "no washer data"
             washerString = "   No washer\n"
             print "no washer"
         if ovenOnTimes:
+            D["oven"] = ovenOnTimes
             ovenString = "   Oven on at: "
             for i in ovenOnTimes:
-                ovenString = ovenString + nicehours(i/1000) + " "
+                ovenString = ovenString + i + " "
                 if ovenOnTimes.index(i) < len(ovenOnTimes)-1:
                     ovenString = ovenString + ", "
                 else:
                     ovenString = ovenString + "\n"
-                print "  Oven on at", nicehours(i/1000)
+                print "  Oven on at", i
         else:
+            D["oven"] = "no oven data"
             ovenString = "   No oven\n"
             print "no oven"
         if cookerOnTimes:
+            D["cooker"] = cookerOnTimes
             cookerString = "   Cooker on at: "
             for i in cookerOnTimes:
-                cookerString = cookerString + nicehours(i/1000) + " "
+                cookerString = cookerString + i + " "
                 if cookerOnTimes.index(i) < len(cookerOnTimes)-1:
                     cookerString = cookerString + ", "
                 else:
                     cookerString = cookerString + "\n"
-                print "  Cooker on at", nicehours(i/1000)
+                print "  Cooker on at", i
         else:
+            D["oven"] = "no cooker data"
             cookerString = "   No cooker\n"
             print "no cooker"
-        
-        # TV
-        teleOn = "off"
-        watched = False
-        teleString = ""
-        for tele in tvSeries:
-            if tele["power"] >= 9:
-                if teleOn <> "on":
-                    #print "Tele  switched on at", nicetime(tele["time"]/1000), tele["power"], "watts"
-                    teleOn = "on"
-                    watched = True
-                    teleOnTime = tele["time"]
-            elif teleOn == "on" and tele["power"] <= 9:
-                #print "Tele switched off at", nicetime(tele["time"]/1000), tele["power"], "watts"
-                if (tele["time"] - teleOnTime)/1000 < 60:
-                    print "Tele was on at", nicehours(teleOnTime/1000), "for", (tele["time"] - teleOnTime)/1000, "seconds"
-                    teleString = teleString + "   Tele on at " + nicehours(teleOnTime/1000) + " for " + str((tele["time"] - teleOnTime)/1000) + " seconds\n" 
+        if teleOnTimes:
+            D["tele"] = teleOnTimes
+            teleString = "   Tele on at: "
+            for i in teleOnTimes:
+                teleString = teleString + i + " "
+                if teleOnTimes.index(i) < len(teleOnTimes)-1:
+                    teleString = teleString + ", "
                 else:
-                    print "Tele was on at", nicehours(teleOnTime/1000), "for", (tele["time"] - teleOnTime)/1000/60, "minutes"
-                    teleString = teleString + "   Tele on at " + nicehours(teleOnTime/1000) + " for " + str((tele["time"] - teleOnTime)/1000) + " minutes\n" 
-                teleOn = "off"
-        if not watched:
-            teleString =  "   No tele data\n"
-
-
+                    teleString = teleString + "\n"
+                print "  Tele on at", i
+        else:
+            D["tele"] = "no tele data"
+            teleString = "   No tele data\n"
+            print "no tele"
+        
 
 
     Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + fridgeString + bedtimeString + busyString + wanderString + doorString1 + "\n"
@@ -715,6 +781,16 @@ def dyh (user, password, bid, to, db, daysago):
     #Text = Text + doorString + doorString1 + "\n"
     print Text
     
+
+    #print "D:", json.dumps(D, indent=4)
+    f = bid + "_" + nicedate(startTime) + "_from_6am.txt"
+    try:
+        with open(f, 'w') as outfile:
+            json.dump(D, outfile, indent=4)
+    except:
+        print "Failed to write file"
+
+
     #exit()
     # Create message container - the correct MIME type is multipart/alternative.
     try:
