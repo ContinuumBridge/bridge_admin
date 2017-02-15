@@ -71,7 +71,7 @@ def getsensor (ss):
 def shower (bid, db, daysago):
     daysAgo = int(daysago)*60*60*24 
     startTime = start() - daysAgo
-    endTime = startTime + daysAgo
+    endTime = startTime + daysAgo + oneDay
 
     print "start time:", nicetime(startTime)
     print "end time:", nicetime(endTime)
@@ -126,10 +126,8 @@ def shower (bid, db, daysago):
             prevK = []
             prevH = 0
             prevT = 0
-            lastT = 0
-            lastK = 0
             noMoreShowersTillItFalls = False
-            showerDebug = True
+            showerDebug = False
             for j in bathroomSeries:
                 if s in j["name"]:
                     if j <> prevJ:
@@ -143,25 +141,25 @@ def shower (bid, db, daysago):
                                 for k in bathroomSeries:
                                     if s in k["name"] and "humidity" in k["name"]:
                                         #print k["name"], k["value"]
-                                        if k <> prevK and k["time"] >= j["time"] and k["time"] <= j["time"] + showerWindow:
-                                            if k["value"] > prevK["value"]:
-                                                #if showerDebug:
-                                                #    print "   ", nicetime(k["time"]/1000), "K risen from", prevK["value"], "to", k["value"]
-                                                # no good just looking at the end point 'cause that could be a long time in the future.
-                                                # So if at any time during this process we get dh high enough and dt small enough...
-                                                if k["value"] - prevH >= 8 and k["time"] - prevT < showerWindow and not noMoreShowersTillItFalls:
-                                                    print nicetime(prevT/1000), "** SHOWER1, dh:", k["value"] - prevH, "dt:", (k["time"] - prevT)/1000/60, "minutes"
-                                                    noMoreShowersTillItFalls = True
-                                                elif k["value"] - prevH >= 6 and k["time"] - prevT <= shortShowerWindow and not noMoreShowersTillItFalls:
-                                                    print nicetime(prevT/1000), "** SHOWER2, dh:", k["value"] - prevH, "dt:", (k["time"] - prevT)/1000/60, "minutes"
-                                                    noMoreShowersTillItFalls = True
-                                                elif k["value"] - prevH > 1 and showerDebug:
-                                                    print nicetime(prevT/1000), "No shower. dh:", k["value"] - prevH, "dt:", (k["time"] - prevT)/1000/60, "minutes, nms:",noMoreShowersTillItFalls 
-
-                                                lastK = k["value"]
-                                                lastT = k["time"]
-                                        prevK = k
-
+                                        if (k <> prevK and k["time"] >= j["time"] 
+                                            and k["time"] <= j["time"] + showerWindow 
+                                            and k["value"] > prevK["value"]):
+                                            #if showerDebug:
+                                            #    print "   ", nicetime(k["time"]/1000), "K risen from", prevK["value"], "to", k["value"]
+                                            # no good just looking at the end point 'cause that could be a long time in the future.
+                                            # So if at any time during this process we get dh high enough and dt small enough...
+                                            if k["value"] - prevH >= 8 and k["time"] - prevT < showerWindow and not noMoreShowersTillItFalls:
+                                                print nicetime(prevT/1000), "** SHOWER1, dh:", k["value"] - prevH, "dt:",\
+                                                    (k["time"] - prevT)/1000/60, "minutes"
+                                                noMoreShowersTillItFalls = True
+                                            elif k["value"] - prevH >= 6 and k["time"] - prevT <= shortShowerWindow and not noMoreShowersTillItFalls:
+                                                print nicetime(prevT/1000), "** SHOWER2, dh:", k["value"] - prevH, "dt:",\
+                                                    (k["time"] - prevT)/1000/60, "minutes"
+                                                noMoreShowersTillItFalls = True
+                                            elif k["value"] - prevH > 1 and showerDebug and not noMoreShowersTillItFalls and showerDebug:
+                                                print nicetime(prevT/1000), "No shower. dh:", k["value"] - prevH, "dt:", (k["time"] - prevT)/1000/60, \
+                                                    "minutes, nms:",noMoreShowersTillItFalls
+                                    prevK = k
                             else: # it fell
                                 noMoreShowersTillItFalls = False
                                 #if showerDebug:
