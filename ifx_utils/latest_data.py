@@ -77,7 +77,7 @@ def batteries (bid, db):
     values.sort(key=operator.itemgetter('time'))
     line = ""
     for j in values:
-        line = '{:<0} {:<15} {:<15} {:<16} {:<2} {:<15}'.format("At", nicetime(j["time"]/1000), "latest data was", j["value"], "on", j["name"]) 
+        line = '{:<15} {:<15} {:<16} {:<2} {:<15}'.format(nicetime(j["time"]/1000), "latest data was", j["value"], "on", j["name"]) 
         print line
         #print "On", nicetime(j["time"]/1000), "latest data was", j["value"], "on", j["name"] 
 
