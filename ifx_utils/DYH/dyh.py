@@ -83,6 +83,7 @@ def dyh (user, password, bid, to, db, daysago):
     daysAgo = int(daysago) #0 # 0 means yesterday
     startTime = start() - daysAgo*60*60*24
     endTime = startTime + oneDay
+    midnight = startTime + 18*oneHour
     #indeces
     i_time = 0
     i_data = 2
@@ -159,7 +160,7 @@ def dyh (user, password, bid, to, db, daysago):
                         powerSeries.append({"time":pt[i_time],  "name": item["name"], "power": pt[i_data]})
             if not "wander" in item["name"].lower() and ("door" in item["name"].lower() or "pir" in item["name"].lower()):
                 for pt in item["points"]:
-                    if pt[i_time] > startTime*1000 + 18*oneHour*1000 and pt[i_time] <= endTime*1000: # night only
+                    if pt[i_time] > startTime*1000 + 13*oneHour*1000 and pt[i_time] <= endTime*1000: # bedtime may be before midnight
                         wanderSeries.append({"time":pt[i_time],  "name": item["name"], "value": pt[i_data]})
             if not "wander" in item["name"].lower() and ("front" in item["name"].lower() or "pir" in item["name"].lower()):
                 for pt in item["points"]:
@@ -369,7 +370,8 @@ def dyh (user, password, bid, to, db, daysago):
                         print "Got up at", nicehours(gotUpTime/1000), "35min PIR count = ", upCount, "door=", doorCount
                         gotUp = True
                     else:
-                        print "not got up at", nicetime(gotUpTime/1000), "35min PIR count = ", upCount, "door=", doorCount
+                        if uptimeDebug:
+                            print "not got up at", nicetime(gotUpTime/1000), "35min PIR count = ", upCount, "door=", doorCount
                         upCount = 0
                         doorCount = 0
         if not gotUp:   
@@ -420,7 +422,7 @@ def dyh (user, password, bid, to, db, daysago):
                         if pt1["room"] == "Bedroom":
                             bedOnes+=1
                         else:
-                            if pt1["time"] > (startTime + 14*oneHour)*1000 and pt1["time"] < (startTime + 19*oneHour)*1000: #slotCount == 3: #startTime + 11*oneHour:
+                            if pt1["time"] > (startTime + 13*oneHour)*1000 and pt1["time"] < (startTime + 19*oneHour)*1000: #slotCount == 3: #startTime + 11*oneHour:
                                 latestOne = pt1 # finding the latest non-bedroom activity
                                 #print "potential latestOne at", nicetime(pt1["time"]/1000), "in", pt1["room"]
                             if pt1["room"] == "Kitchen":
@@ -537,14 +539,34 @@ def dyh (user, password, bid, to, db, daysago):
         print "Ignored", dupCount, "duplicate values and", repCount, "non-transitions"
 
         # bedtime
+        lightOn = False
+        lightOffTime = 0
         if latestOne and not inBed: # and no more activity for >30mins
             bedtimeString = "   Went to bed at " + nicehours(latestOne["time"]/1000)
             D["bedTime"] = nicehours(latestOne["time"]/1000)
             inBed = True
             print "Went to bed at:", nicehours(latestOne["time"]/1000), "from", latestOne["room"]
+            #was the light on or off?
+            for p in powerSeries:
+                if "bedside" in p["name"].lower(): 
+                    if p["time"] <= latestOne["time"]: # before bedtime
+                        if ["power"] > 3:
+                            lightOn = True
+                        else:
+                            lightOn = False
+                    elif p["time"] >= latestOne["time"]: # after bedtime
+                        if p["power"] > 3:
+                            lightOn = True
+                            print nicehours(p["time"]/1000), "light on"
+                        elif lightOn:
+                            lightOffTime = p["time"]
+                            lightOn = False
+            if lightOffTime <> 0:
+                print nicehours(latestOne["time"]/1000), "<-bedtime, light went off at ", nicetime(lightOffTime/1000)
+                bedtimeString = bedtimeString + ", bedside light on 'til " + nicehours(lightOffTime/1000)
         else:
             print "Went to bed from nowhere!?!"
-            #else:
+
         for latestuff in allPIRSeries:
             if latestOne:
                 if (latestuff["time"]>latestOne["time"] 
@@ -553,38 +575,31 @@ def dyh (user, password, bid, to, db, daysago):
                     and latestuff["value"]==1):
                     print "Bedtime may be wrong: activity after bedtime:", nicetime(latestuff["time"]/1000), "in", latestuff["room"]
 
+        #wanders
         wanderWindow = 15*oneMinute
-        firstEventTime = 0
         wanderTimes = []
         wanderString = ""
+        wanderStart = 0
+        bStr = "weeble" #"bedtime"
+        if latestOne:
+            bStr = "bedtime"
+            bedtime = latestOne["time"]
+        else:
+            bStr = "midnight"
+            bedtime = midnight*1000
         if wanderSeries:
             for w in wanderSeries:
-                if firstEventTime == 0 and w["value"] == 1 and w["time"] > latestOne["time"] + wanderWindow*1000 and "bedroom" not in w["name"].lower():
-                    firstEventTime = w["time"]
-                    wanderTimes.append(nicehours(firstEventTime/1000))
-                    print "frst:", nicetime(firstEventTime/1000), "value:", w["value"], "this:", nicetime(w["time"]/1000), "bedtime:", nicetime(latestOne["time"]/1000)
+                if (w["time"] > bedtime
+                    and "bedroom" not in w["name"].lower()
+                    and w["value"] == 1 
+                    and w["time"] > wanderStart + wanderWindow*1000):
+                    wanderStart = w["time"]
+                    wanderTimes.append(nicehours(wanderStart/1000))
+                    print nicetime(w["time"]/1000), "new wander in", getsensor(w["name"]), "bedtime:", nicetime(bedtime/1000)
                 #else:
-                #    print "missed", w["name"], "value:", w["value"], "at:", nicetime(w["time"]/1000), "bedtime:", nicetime(latestOne["time"]/1000)
-
-        if firstEventTime == 0:
-            D["wanders"] = "No wanders outside the bedroom after bedtime"
-            wanderString = "No wanders outside the bedroom after bedtime\n"
-            print "didn't find any wanders"
-        else:
-            print "First wander  :", nicetime(firstEventTime/1000)
-            wanderString = "Wanders outside the bedroom after bedtime at: "
-
-            for w in wanderSeries:
-                if "bedroom" not in w["name"].lower() and w["time"] >= firstEventTime and w["time"] > latestOne["time"]:
-                    if w["time"] >= firstEventTime + wanderWindow*1000: 
-                        firstEventTime = w["time"]
-                        wanderTimes.append(nicehours(w["time"]/1000))
-                        print "New wander  :", nicetime(w["time"]/1000), "in", getsensor(w["name"])
-                    #else:
-                        #print "Other sensors:", nicetime(w["time"]/1000), "in", getsensor(w["name"])
-                        #if "bathroom" in w["name"].lower():
-                        #    print "found bathroom:", nicetime(w["time"]/1000), "in", getsensor(w["name"])
-
+                #    print nicetime(w["time"]/1000), "No wander in", w["name"], "bedtime:", nicetime(bedtime/1000)
+        if wanderTimes:
+            wanderString = "Wanders outside the bedroom after " + bStr + " at: "
             for x in wanderTimes:
                 print "wanderTimes:", x
                 if len(wanderTimes) == 1:
@@ -596,7 +611,10 @@ def dyh (user, password, bid, to, db, daysago):
                 else:
                     wanderString = wanderString + str(x) + ", "
             D["wanders"] = wanderTimes
-                
+        elif latestOne:
+            D["wanders"] = "No wanders outside the bedroom after  " + bStr
+            wanderString = "No wanders outside the bedroom after " + bStr + "\n"
+
         bedtimeString = bedtimeString + "\n"
         
 
@@ -791,7 +809,7 @@ def dyh (user, password, bid, to, db, daysago):
         print "Failed to write file"
 
 
-    #exit()
+    exit()
     # Create message container - the correct MIME type is multipart/alternative.
     try:
         msg = MIMEMultipart('alternative')
