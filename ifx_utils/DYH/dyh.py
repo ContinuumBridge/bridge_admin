@@ -809,7 +809,7 @@ def dyh (user, password, bid, to, db, daysago):
         print "Failed to write file"
 
 
-    exit()
+    #exit()
     # Create message container - the correct MIME type is multipart/alternative.
     try:
         msg = MIMEMultipart('alternative')
