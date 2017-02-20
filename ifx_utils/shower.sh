@@ -1,4 +1,4 @@
-cd /home/ubuntu/bridge_admin/ifx_utils/DYH 
+cd /home/ubuntu/bridge_admin/ifx_utils 
 date
 ./shower.py --user bridges@continuumbridge.com --db Bridges --password Mucht00f@r --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com" --daysago 0
 date
