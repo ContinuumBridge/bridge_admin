@@ -235,8 +235,7 @@ def shower_loop(user, password, to, db, daysago):
     # Create message container - the correct MIME type is multipart/alternative.
     try:
         msg = MIMEMultipart('alternative')
-        #msg['Subject'] = "Activity for bridge "+bid+" from "+nicedate(startTime)+" to "+nicedate(endTime)+" (InfluxDB/"+db+")"
-        msg['Subject'] = "Activity for DYH bungalow from 6am "+nicedate(startTime)
+        msg['Subject'] = "Showers found in 24hrs since "+nicetime(startTime)
         msg['From'] = "Bridges <bridges@continuumbridge.com>"
         recipients = to.split(',')
         [p.strip(' ') for p in recipients]
