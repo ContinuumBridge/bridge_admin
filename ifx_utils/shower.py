@@ -53,7 +53,7 @@ def epochtime(date_time):
 def start():
     t = time.localtime(time.time() - oneDay)
     yesterday = time.strftime('%Y-%m-%d', t)
-    s = yesterday + " 05:00:00" # 5am for early risers!
+    s = yesterday + " 01:00:00" # 1am for the sudden jumps
     return epochtime(s)
 
 def getwander (ss):
@@ -66,22 +66,12 @@ def getsensor (ss):
     jj = ss[1].replace("_PIR","")
     return jj
 
+def shower (bid, db, startTime, endTime, daysago):
+    #startTime = start() - daysAgo
+    #endTime = startTime + oneDay
 
-@click.command()
-@click.option('--user', nargs=1, help='User name of email account.')
-@click.option('--password', prompt='Password', help='Password of email account.')
-@click.option('--to', nargs=1, help='The address to send the email to.')
-@click.option('--bid', nargs=1, help='The bridge ID to list.')
-@click.option('--db', nargs=1, help='The database to look in')
-@click.option('--daysago', nargs=1, help='How far back to look')
-
-def shower (user, password, bid, to, db, daysago):
-    daysAgo = int(daysago)*60*60*24 
-    startTime = start() - daysAgo
-    endTime = startTime + oneDay
-
-    print "start time:", nicetime(startTime)
-    print "end time:", nicetime(endTime)
+    print "\nBID:", bid, "start time:", nicetime(startTime)
+    print "BID:", bid, "end time:", nicetime(endTime)
  
     if not bid:
         print "You must provide a bridge ID using the --bid option."
@@ -144,6 +134,7 @@ def shower (user, password, bid, to, db, daysago):
                     if j <> prevJ:
                         if "binary" in j["name"].lower():
                             if j["value"] == 1: # reset occStart for every j cause k takes it to the end of longShowerWindow
+                                #print nicetime(j["time"]/1000), "j occStart set by:",  j["name"] 
                                 occStart = j["time"]
 
                         if "humidity" in j["name"]: 
@@ -155,8 +146,9 @@ def shower (user, password, bid, to, db, daysago):
                                 #    print "\n"
                                 kFell = False
                                 for k in bathroomSeries:
-                                    if "binary" in k["name"].lower():
+                                    if "binary" in k["name"].lower() and s in k["name"]:
                                         if k["value"] == 1:# and k["time"] > occStart + occWindow:
+                                            #print nicetime(k["time"]/1000), "k occStart set by:",  k["name"] 
                                             occStart = k["time"]
                                     if s in k["name"] and "humidity" in k["name"] and not kFell:
                                         if (k <> prevK and k["time"] >= j["time"] 
@@ -194,7 +186,7 @@ def shower (user, password, bid, to, db, daysago):
                                                         print "pj", nicetime(prevT/1000), "No shower at k:",nicehours(k["time"]/1000), "dh:", \
                                                             k["value"] - prevH, "dt:", (k["time"] - prevT)/1000/60, \
                                                             "occStart:", nicetime(occStart/1000)
-                                                elif k["value"] > prevH and showerDebug:
+                                                elif k["value"] > prevH and occStart <> 0 and showerDebug:
                                                     print "pj", nicetime(prevT/1000), "No show shower at k:", nicehours(k["time"]/1000), \
                                                         "cause abs Kt-OS=", abs(k["time"] - occStart)/60/1000, "minutes and occStart:", nicetime(occStart/1000)
                                             else: #kH fell
@@ -209,14 +201,35 @@ def shower (user, password, bid, to, db, daysago):
                             prevH = j["value"]
 
         if showerTimes:
-            showerString = "Showers found on " + bid + " at: \n"
+            showerString = "\nShowers found on " + bid + " at: \n"
             for x in showerTimes:
                 showerString = showerString + "   " + str(x) + "\n"
         else:
-            showerString = "No showers found on " + bid
+            showerString = "\nNo showers found on " + bid + "\n"
 
 
-    print len(showerTimes), "\n", showerString                                
+    #print len(showerTimes), "\n", showerString                                
+    return showerString                                
+
+@click.command()
+@click.option('--user', nargs=1, help='User name of email account.')
+@click.option('--password', prompt='Password', help='Password of email account.')
+@click.option('--to', nargs=1, help='The address to send the email to.')
+#@click.option('--bid', nargs=1, help='The bridge ID to list.')
+@click.option('--db', nargs=1, help='The database to look in')
+@click.option('--daysago', nargs=1, help='How far back to look')
+
+def shower_loop(user, password, to, db, daysago):
+    daysAgo = int(daysago)*60*60*24 
+    startTime = start() - daysAgo
+    endTime = startTime + oneDay
+
+    bidList = ["BID11", "BID267", "BID264"]
+    showerString = ""
+    for b in bidList:
+        showerString = showerString + shower(b, db, startTime, endTime, daysAgo)
+
+    print showerString
 
     #exit()
     # Create message container - the correct MIME type is multipart/alternative.
@@ -247,7 +260,8 @@ def shower (user, password, bid, to, db, daysago):
         mail.quit()
     except Exception as ex:
         print "sendMail problem. To:", to, "type: ", type(ex), "exception: ", str(ex.args)
+
                   
 if __name__ == '__main__':
-    shower()
+    shower_loop()
 
