@@ -53,7 +53,7 @@ def epochtime(date_time):
 def start():
     t = time.localtime(time.time() - oneDay)
     yesterday = time.strftime('%Y-%m-%d', t)
-    s = yesterday + " 01:00:00" # 1am for the sudden jumps
+    s = yesterday + " 12:00:00" # 1am for the sudden jumps
     return epochtime(s)
 
 def getwander (ss):
@@ -111,11 +111,13 @@ def shower (bid, db, startTime, endTime, daysago):
         #print "bS:", json.dumps(bathroomSeries,indent=4)
 	
         showerTimes = []
+        veryShortShowerWindow = 11*oneMinute*1000
+        veryShortShowerThresh = 3.0
         shortShowerWindow = 13*oneMinute*1000
-        showerWindow = 41*oneMinute*1000
-        longShowerWindow = 320*oneMinute*1000
         shortShowerThresh = 6
+        showerWindow = 41*oneMinute*1000
         showerThresh = 6
+        longShowerWindow = 320*oneMinute*1000
         longShowerThresh = 14
         for s in sensorList:
             print "next s", s
@@ -140,10 +142,16 @@ def shower (bid, db, startTime, endTime, daysago):
                         if "humidity" in j["name"]: 
                             if prevH <> 0 and j["value"] > prevH: 
                                 #if showerDebug:
-                                #    print nicetime(j["time"]/1000), "H Gone up by", j["value"]-prevH, "to", j["value"], "in", (j["time"] - prevT)/1000/60, "minutes" 
+                                #    print "tj", nicetime(j["time"]/1000), "H Gone up by", j["value"]-prevH, "to", j["value"], "in", (j["time"] - prevT)/1000/60, "minutes"
                                 # every time it goes up, look ahead to see how far and how long and whether occupied
-                                #if not noMoreShowersTillItFalls:
-                                #    print "\n"
+
+                                """ a failed attempt to find two close showers without a drop in between
+                                if noMoreShowersTillItFalls and j["time"] - prevT > 1000*30*oneMinute:
+                                    noMoreShowersTillItFalls = False
+                                    if showerDebug:
+                                        print "pj", nicetime(j["time"]/1000), "waited longer than 30 mins for it to fall so start looking again" 
+                                """
+
                                 kFell = False
                                 for k in bathroomSeries:
                                     if "binary" in k["name"].lower() and s in k["name"]:
@@ -152,7 +160,7 @@ def shower (bid, db, startTime, endTime, daysago):
                                             occStart = k["time"]
                                     if s in k["name"] and "humidity" in k["name"] and not kFell:
                                         if (k <> prevK and k["time"] >= j["time"] 
-                                            and k["time"] <= j["time"] + longShowerWindow 
+                                            and k["time"] <= j["time"] + 2*longShowerWindow  # why restrict k forwards?
                                             and not noMoreShowersTillItFalls):
                                             if k["value"] > prevK["value"]: # whilst kH is rising...
                                                 if abs(k["time"] - occStart) < occWindow: #  and we're occupied
@@ -161,30 +169,39 @@ def shower (bid, db, startTime, endTime, daysago):
                                                     if (k["value"] - prevH >= shortShowerThresh and k["time"] - prevT <= shortShowerWindow):
                                                         showerTimes.append(nicetime(occStart/1000))
                                                         print "pj", nicetime(prevT/1000), "** SHOWER_s",\
-                                                            "prevJ:", nicehours(prevT/1000), "thisK:", nicehours(k["time"]/1000),\
-                                                            "occStart:", nicehours(occStart/1000),\
+                                                            "at occStart:", nicehours(occStart/1000),\
                                                             "dh:", k["value"] - prevH, \
                                                             "dt:",(k["time"] - prevT)/1000/60
                                                         noMoreShowersTillItFalls = True
                                                     elif (k["value"] - prevH >= showerThresh and k["time"] - prevT < showerWindow):
                                                         print "pj", nicetime(prevT/1000), "** SHOWER_n",\
-                                                            "prevJ:", nicehours(prevT/1000), "thisK:", nicehours(k["time"]/1000),\
-                                                            "occStart:", nicehours(occStart/1000),\
+                                                            "at occStart:", nicehours(occStart/1000),\
                                                             "dh:", k["value"] - prevH, \
                                                             "dt:",(k["time"] - prevT)/1000/60
+                                                        #"prevJ:", nicehours(prevT/1000), "thisK:", nicehours(k["time"]/1000),\
+                                                        #"occStart:", nicehours(occStart/1000),\
                                                         noMoreShowersTillItFalls = True
                                                         showerTimes.append(nicetime(occStart/1000))
                                                     elif (k["value"] - prevH >= longShowerThresh and k["time"] - prevT < longShowerWindow):
                                                         print "pj", nicetime(prevT/1000), "** SHOWER_l",\
-                                                            "prevJ:", nicehours(prevT/1000), "thisK:", nicehours(k["time"]/1000),\
-                                                            "occStart:", nicehours(occStart/1000),\
+                                                            "at occStart:", nicehours(occStart/1000),\
                                                             "dh:", k["value"] - prevH, \
                                                             "dt:",(k["time"] - prevT)/1000/60
+                                                        #"prevJ:", nicehours(prevT/1000), "thisK:", nicehours(k["time"]/1000),\
+                                                        #"occStart:", nicehours(occStart/1000),\
+                                                        noMoreShowersTillItFalls = True
+                                                        showerTimes.append(nicetime(occStart/1000))
+                                                    elif float((k["value"] - prevH) >= veryShortShowerThresh and k["time"] - prevT < veryShortShowerWindow):
+                                                        print "pj", nicetime(prevT/1000), "** SHOWER_vs",\
+                                                            "prevJ:", nicehours(prevT/1000), "thisK:", nicehours(k["time"]/1000),\
+                                                            "occStart:", nicehours(occStart/1000),\
+                                                            "dh:", float(k["value"] - prevH), \
+                                                            "dt:",float((k["time"] - prevT)/1000/60)
                                                         noMoreShowersTillItFalls = True
                                                         showerTimes.append(nicetime(occStart/1000))
                                                     elif k["value"] > prevH and showerDebug:
                                                         print "pj", nicetime(prevT/1000), "No shower at k:",nicehours(k["time"]/1000), "dh:", \
-                                                            k["value"] - prevH, "dt:", (k["time"] - prevT)/1000/60, \
+                                                            float(k["value"]) - float(prevH), "dt:", float((k["time"] - prevT)/1000.0/60.0), \
                                                             "occStart:", nicetime(occStart/1000)
                                                 elif k["value"] > prevH and occStart <> 0 and showerDebug:
                                                     print "pj", nicetime(prevT/1000), "No show shower at k:", nicehours(k["time"]/1000), \
@@ -222,8 +239,9 @@ def shower (bid, db, startTime, endTime, daysago):
 def shower_loop(user, password, to, db, daysago):
     daysAgo = int(daysago)*60*60*24 
     startTime = start() - daysAgo
-    endTime = startTime + oneDay
+    endTime = startTime + oneDay # + daysAgo
 
+    #bidList = ["BID267"]
     bidList = ["BID11", "BID267", "BID264"]
     showerString = ""
     for b in bidList:
@@ -235,7 +253,7 @@ def shower_loop(user, password, to, db, daysago):
     # Create message container - the correct MIME type is multipart/alternative.
     try:
         msg = MIMEMultipart('alternative')
-        msg['Subject'] = "Showers found in 24hrs since "+nicetime(startTime)
+        msg['Subject'] = "Showers found in 24hrs since midday yesterday"
         msg['From'] = "Bridges <bridges@continuumbridge.com>"
         recipients = to.split(',')
         [p.strip(' ') for p in recipients]
