@@ -27,6 +27,7 @@ import urllib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.MIMEImage import MIMEImage
+# import shower
 
 #Constants
 oneMinute          = 60
@@ -908,12 +909,13 @@ def dyh (user, password, bid, to, db, daysago, doors):
             print "      no cooker"
         
 
-    #exit()
+    # this needs changing to return showerTimes
+    #showerString = shower.shower("BID264", "Bridges", startTime, endTime, daysAgo)
 
     Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + fridgeString + bedtimeString + busyString + wanderString + doorString2 + "\n"
-    print Text
+    print Text 
     
-
+    #exit()
     #print "D:", json.dumps(D, indent=4)
     f = bid + "_" + nicedate(startTime) + "_from_6am.txt"
     try:
