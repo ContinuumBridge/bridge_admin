@@ -234,17 +234,21 @@ def shower (bid, db, startTime, endTime, daysago):
 @click.option('--user', nargs=1, help='User name of email account.')
 @click.option('--password', prompt='Password', help='Password of email account.')
 @click.option('--to', nargs=1, help='The address to send the email to.')
-#@click.option('--bid', nargs=1, help='The bridge ID to list.')
+@click.option('--bid', nargs=1, help='The bridge ID to list.')
 @click.option('--db', nargs=1, help='The database to look in')
 @click.option('--daysago', nargs=1, help='How far back to look')
 
-def shower_loop(user, password, to, db, daysago):
+def shower_loop(user, password, to, db, bid, daysago):
     daysAgo = int(daysago)*60*60*24 
     startTime = start() - daysAgo
     endTime = startTime + oneDay # + daysAgo
 
-    #bidList = ["BID267"]
-    bidList = ["BID11", "BID267", "BID264"]
+    if not bid:
+        bidList = ["BID11", "BID267", "BID264"]
+        #bidList = ["BID267"]
+    else:
+        bidList = [bid]
+
     showerString = ""
     for b in bidList:
         showerString = showerString + shower(b, db, startTime, endTime, daysAgo)
