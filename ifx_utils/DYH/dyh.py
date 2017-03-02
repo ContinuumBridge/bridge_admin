@@ -819,7 +819,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
                     teleOnTime = app["time"]
                 elif app["power"] < 10:
                     if teleOn:
-                        teleOnTimes.append({"ontime": nicehours(teleOnTime/1000), "onfor":(app["time"]-teleOnTime)/60/1000})
+                        teleOnTimes.append({"ontime": nicehours(teleOnTime/1000), "offtime":nicehours(app["time"]/1000)})
                         print "tele off at", nicehours(app["time"]/1000), "power:", app["power"],\
                             "was on for", (app["time"]-teleOnTime)/60/1000, "minutes"
                     else:
@@ -830,8 +830,8 @@ def dyh (user, password, bid, to, db, daysago, doors):
             D["tele"] = teleOnTimes
             teleString = "      Tele on at:\n"
             for i in teleOnTimes:
-                teleString = teleString + "        " + i["ontime"] + " for " + str(i["onfor"]) + " mins\n"
-                print "     Tele on at", i["ontime"], "for", i["onfor"]
+                teleString = teleString + "        " + i["ontime"] + " until " + str(i["offtime"]) + "\n"
+                print "     Tele on at", i["ontime"], "til", i["offtime"]
         else:
             D["tele"] = "no tele data"
             teleString = "      No tele data\n"
