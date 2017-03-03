@@ -501,6 +501,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
         nightCount = 0
         bedroomWanderCount = 0
         latestOne = {}
+        A1 = {}
         A = {}
         inBed = False
         prevprString = "foo"
@@ -511,6 +512,21 @@ def dyh (user, password, bid, to, db, daysago, doors):
         eTotal = 0
         nTotal = 0
         print "\n\nDay:", nicedate(slot)
+
+
+        f = bid + "_activity"
+        try:
+	    with open(f, 'r') as a:
+	        A1 = json.load(a)
+            print "Got activity: file", json.dumps(A1, indent=4)
+        except:
+            print "No activity: file"
+        if not A1:
+	    A1["morning"] = []
+	    A1["afternoon"] = []
+	    A1["night"] = []
+	    A1["evening"] = []
+
         while slot < endTime:
             K = 0
             H = 0
@@ -519,6 +535,8 @@ def dyh (user, password, bid, to, db, daysago, doors):
             slotCount+=1
             prString= ""
             bedOnes = 0
+            levelStr = "No average yet"
+	    ave = -2
             for pt1 in allPIRSeries:
                 if pt1["time"]/1000 >= slot and pt1["time"]/1000 <= slot + slotSize: 
                     if pt1["time"]  <> prevTime and pt1["room"] == prevRoom and pt1["value"] == prevValue:
@@ -550,60 +568,57 @@ def dyh (user, password, bid, to, db, daysago, doors):
                 prevValue = pt1["value"]
                 prevRoom = pt1["room"]
             if slotCount == 1:
-                mornThresh = 40
-		if bedOnes+K+H+L+b == 0:
-                   levelStr = "None"
-                elif bedOnes+K+H+L+b < mornThresh:
-                   levelStr = "Low"
-                elif bedOnes+K+H+L+b < mornThresh*2:
-                   levelStr = "Med"
-                else:
-                   levelStr = "High"
-                busyString = busyString + "  Morning activity: " + levelStr + " (" + str(bedOnes+K+H+L+b) + ")\n"
+                if len(A1["morning"])>0:
+		    ave = sum(A1["morning"])/len(A1["morning"]) 
+        	    if bedOnes+K+H+L+b == 0:
+                        levelStr = "None"
+                    elif bedOnes+K+H+L+b <= ave:
+                       levelStr = "Below average"
+                    else:
+                       levelStr = "Above average"
+                busyString = busyString + "  Morning activity:   " + levelStr + " (" + str(bedOnes+K+H+L+b) + ")\n"
+		A1["morning"].append(bedOnes+K+H+L+b)
                 mTotal = bedOnes+K+H+L+b 
-                print "   Morning activity   =", bedOnes+K+H+L+b 
+                print "   Morning activity   =", bedOnes+K+H+L+b, "ave=", ave 
             elif slotCount == 2:
-                mornThresh = 40
-		if bedOnes+K+H+L+b == 0:
-                   levelStr = "None"
-                elif bedOnes+K+H+L+b < mornThresh:
-                   levelStr = "Low"
-                elif bedOnes+K+H+L+b < mornThresh*2:
-                   levelStr = "Med"
-                else:
-                   levelStr = "High"
-                print "   Afternoon activity =", bedOnes+K+H+L+b 
+                if len(A1["afternoon"])>0:
+                    ave = sum(A1["afternoon"])/len(A1["afternoon"])
+		    if bedOnes+K+H+L+b == 0:
+                       levelStr = "None"
+                    elif bedOnes+K+H+L+b <= ave:
+                       levelStr = "Below average"
+                    else:
+                       levelStr = "Above average"
+                print "   Afternoon activity =", bedOnes+K+H+L+b, "ave=", ave 
+                A1["afternoon"].append(bedOnes+K+H+L+b)
                 busyString = busyString + "  Afternoon activity: " + levelStr + " (" + str(bedOnes+K+H+L+b) + ")\n"
-                A["afternoon"] = bedOnes+K+H+L+b 
                 aTotal = bedOnes+K+H+L+b 
             elif slotCount == 3:
-                mornThresh = 40
-		if bedOnes+K+H+L+b == 0:
-                   levelStr = "None"
-                elif bedOnes+K+H+L+b < mornThresh:
-                   levelStr = "Low"
-                elif bedOnes+K+H+L+b < mornThresh*2:
-                   levelStr = "Med"
-                else:
-                   levelStr = "High"
-                print "   Evening aggregate activity   =", bedOnes+K+H+L+b 
-                busyString = busyString + "  Evening activity:    " + levelStr + " (" + str(bedOnes+K+H+L+b) + ")\n"
-                A["evening"] = bedOnes+K+H+L+b 
+                if len(A1["evening"])>0:
+                    ave = sum(A1["evening"])/len(A1["evening"])
+    		    if bedOnes+K+H+L+b == 0:
+                       levelStr = "None"
+                    elif bedOnes+K+H+L+b <= ave:
+                       levelStr = "Below average"
+                    else:
+                       levelStr = "Above average"
+                print "   Evening aggregate activity   =", bedOnes+K+H+L+b, "ave=", ave 
+                busyString = busyString + "  Evening activity:   " + levelStr + " (" + str(bedOnes+K+H+L+b) + ")\n"
+                A1["evening"].append(bedOnes+K+H+L+b)
                 eTotal = bedOnes+K+H+L+b 
             elif slotCount == 4:
-                nightThresh = 20
-		if bedOnes+K+H+L+b == 0:
-                   levelStr = "None"
-                elif bedOnes+K+H+L+b < nightThresh:
-                   levelStr = "Low"
-                elif bedOnes+K+H+L+b < nightThresh*2:
-                   levelStr = "Med"
-                else:
-                   levelStr = "High"
-                busyString = busyString + "  Night activity:      " + levelStr + " (" + str(bedOnes+K+H+L+b) + ")\n"
-                A["night"] = bedOnes+K+H+L+b 
+                if len(A1["night"])>0:
+                    ave = sum(A1["night"])/len(A1["night"])
+           	    if bedOnes+K+H+L+b == 0:
+                       levelStr = "None"
+                    elif bedOnes+K+H+L+b <= ave:
+                       levelStr = "Below average"
+                    else:
+                       levelStr = "Above average"
+                busyString = busyString + "  Night activity:     " + levelStr + " (" + str(bedOnes+K+H+L+b) + ")\n"
+                A1["night"].append(bedOnes+K+H+L+b)
                 nTotal = bedOnes+K+H+L+b 
-                print "   Night activity     =", bedOnes+K+H+L+b 
+                print "   Night activity     =", bedOnes+K+H+L+b, "ave=", ave 
                 nightCount = bedOnes+K+H+L+b
                 bedroomWanderCount = bedOnes
             else:
@@ -643,10 +658,15 @@ def dyh (user, password, bid, to, db, daysago, doors):
                         {"kitchenPercent":kitchenPercent},{"hallPercent":hallPercent},{"bathroomPercent":bathroomPercent}]
                 
             slot = slot + slotSize
+        f = bid + "_activity"
+        try:
+            with open(f, 'w') as outfile:
+                json.dump(A1, outfile, indent=4)
+        except:
+            print "Failed to write activity file"
 
         D["activity"] = A
         #print "A:", json.dumps(A, indent=4)
-
         print "Ignored", dupCount, "duplicate values and", repCount, "non-transitions"
 
         # bedtime
@@ -819,7 +839,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
                     teleOnTime = app["time"]
                 elif app["power"] < 10:
                     if teleOn:
-                        teleOnTimes.append({"ontime": nicehours(teleOnTime/1000), "onfor":(app["time"]-teleOnTime)/60/1000})
+                        teleOnTimes.append({"ontime": nicehours(teleOnTime/1000), "offtime":nicehours(app["time"]/1000)})
                         print "tele off at", nicehours(app["time"]/1000), "power:", app["power"],\
                             "was on for", (app["time"]-teleOnTime)/60/1000, "minutes"
                     else:
@@ -830,8 +850,8 @@ def dyh (user, password, bid, to, db, daysago, doors):
             D["tele"] = teleOnTimes
             teleString = "      Tele on at:\n"
             for i in teleOnTimes:
-                teleString = teleString + "        " + i["ontime"] + " for " + str(i["onfor"]) + " mins\n"
-                print "     Tele on at", i["ontime"], "for", i["onfor"]
+                teleString = teleString + "        " + i["ontime"] + " until " + str(i["offtime"]) + "\n"
+                print "     Tele on at", i["ontime"], "til", i["offtime"]
         else:
             D["tele"] = "no tele data"
             teleString = "      No tele data\n"
@@ -915,8 +935,6 @@ def dyh (user, password, bid, to, db, daysago, doors):
     Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + fridgeString + bedtimeString + busyString + wanderString + doorString2 + "\n"
     print Text 
     
-    #exit()
-    #print "D:", json.dumps(D, indent=4)
     f = bid + "_" + nicedate(startTime) + "_from_6am.txt"
     try:
         with open(f, 'w') as outfile:
