@@ -27,7 +27,6 @@ import urllib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.MIMEImage import MIMEImage
-# import shower
 
 #Constants
 oneMinute          = 60
@@ -84,7 +83,7 @@ def getsensor (ss):
 def dyh (user, password, bid, to, db, daysago, doors):
     daysAgo = int(daysago) #0 # 0 means yesterday
     startTime = start() - daysAgo*60*60*24
-    endTime = startTime + oneDay
+    endTime = startTime + oneDay # + daysAgo*60*60*24
     midnight = startTime + 18*oneHour
     #indeces
     i_time = 0
@@ -122,6 +121,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
         allPIRSeries = []
         wanderSeries = []
         powerSeries = []
+        allSeries = []
         inOutSeries = []
         tvSeries = []
         doorSeries = []
@@ -131,6 +131,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
             if ("wander" in series["name"].lower() 
                 or "power" in series["name"].lower() 
                 or ("pir" in series["name"].lower() and "binary" in series["name"].lower())
+                or "humidity" in series["name"].lower() 
                 or "tv" in series["name"].lower() 
                 or ("door" in series["name"].lower() and "binary" in series["name"].lower())): 
             # and not "outside" in series["name"].lower():
@@ -170,18 +171,132 @@ def dyh (user, password, bid, to, db, daysago, doors):
                 for pt in item["points"]:
                     if pt[i_time] > startTime*1000 and pt[i_time]/1000 <=startTime + oneDay:
                         inOutSeries.append({"time":pt[i_time],  "name": item["name"], "value": pt[i_data]})
-            #if not "wander" in item["name"].lower() and ("front" in item["name"].lower() or "pir" in item["name"].lower()):
-            #    for pt in item["points"]:
-            #        if pt[i_time] > startTime*1000 and pt[i_time]/1000 <=startTime + oneDay:
-            #            inOutSeries.append({"time":pt[i_time],  "name": item["name"], "value": pt[i_data]})
+            if not "wander" in item["name"].lower():
+                for pt in item["points"]:
+                    if pt[i_time] > startTime*1000 and pt[i_time]/1000 <= endTime: #startTime + oneDay:
+                        allSeries.append({"time":pt[i_time],  "name": item["name"], "value": pt[i_data]})
         allPIRSeries.sort(key=operator.itemgetter('time'))
         tvSeries.sort(key=operator.itemgetter('time'))
         doorSeries.sort(key=operator.itemgetter('time'))
         powerSeries.sort(key=operator.itemgetter('time'))
         wanderSeries.sort(key=operator.itemgetter('time'))
         inOutSeries.sort(key=operator.itemgetter('time'))
+        allSeries.sort(key=operator.itemgetter('time'))
 
-        print "Doors as an fsm"
+        print "Showers"
+	showerDebug = False
+        occStart = 0
+        occWindow = 1000*oneMinute*20 # cause there can be a lag between occupancy and rising H
+        kFell = False
+        prevJ = 0
+        prevK = []
+        prevH = 0
+        prevT = 0
+        noMoreShowersTillItFalls = False
+        longShowerWindow = 320*oneMinute*1000
+	showerTimes = []
+	for j in allSeries:
+	    if "connected" in j["name"].lower() or not "bathroom" in j["name"].lower():
+	        #print nicetime(j["time"]/1000), "Skipping", j["name"]
+		continue
+	    if j == prevJ:
+	        print nicetime(j["time"]/1000), "****************** Skipped duplicate j on", j["name"]
+		continue
+	    if "binary" in j["name"].lower() and "bathroom" in j["name"].lower():
+		if j["value"] == 1: # reset occStart for every j cause k takes it to the end of longShowerWindow
+	            if showerDebug:
+			print nicetime(j["time"]/1000), "j occStart set by:",  j["name"] 
+		    occStart = j["time"]
+
+	    if "humidity" in j["name"].lower(): 
+		if prevH <> 0 and j["value"] > prevH: 
+		    # H doesn't always fall between showers so look for a small rise over 
+		    # a long time and pretend it fell. 
+		    # Catches some 2nd showers but not all
+		    if (j["value"] - prevH < 2 
+			and (j["time"] - prevT) > 18*oneMinute*1000 
+			and noMoreShowersTillItFalls 
+			and j["time"]>occStart):
+			print "j", nicetime(j["time"]/1000), "nmstif:", noMoreShowersTillItFalls, "j rose by",\
+			    j["value"] - prevH, "in", (j["time"] - prevT)/1000/60, "minutes - so pretending it fell"   
+			noMoreShowersTillItFalls = False
+		    if showerDebug:
+		        print "j", nicetime(j["time"]/1000), "H Gone up by", j["value"]-prevH, "to", j["value"],\
+		            "in", (j["time"] - prevT)/1000/60, "minutes\n"
+		    # every time j` goes up, look ahead to see how far and how long and whether occupied
+		    kFell = False
+		    for k in allSeries:
+			if "bathroom" not in k["name"].lower():
+			    continue
+			if "binary" in k["name"].lower() and "pir" in k["name"].lower():
+			    if k["value"] == 1:# and k["time"] > occStart + occWindow:
+		                #if showerDebug:
+				#    print nicetime(k["time"]/1000), "k occStart set by:",  k["name"] 
+				occStart = k["time"]
+			if "humidity" in k["name"] and not kFell:
+			    if (k <> prevK and k["time"] >= j["time"] 
+				and k["time"] <= j["time"] + 2*longShowerWindow # restrict k forwards otherwise it
+				and not noMoreShowersTillItFalls):              # may find a shower miles away based on j
+				if k["value"] > prevK["value"]: # whilst kH is rising...
+				    if showerDebug:
+					print "pj:", nicetime(prevT/1000), "k:", nicetime(k["time"]/1000), "next k:", k["value"]
+				    if abs(k["time"] - occStart) < occWindow: #  and we're occupied
+					#print "occstart:", nicehours(occStart/1000), "kt:", nicehours(k["time"]/1000), "so we're",\
+					deltaT = (k["time"] - prevT)/1000/60
+					deltaH = k["value"] - prevH 
+					# two gradients
+					# for dh under 10, we require shorter times (dt = m1*dh + c1)
+					# for dh >10 we allow more time to capture the sudden jumps after a long time
+					m1 = 10
+					c1 = -19
+					m2 = 59
+					c2 = -516
+					if (deltaH <= 10 and deltaT < m1*deltaH +c1) or (deltaH > 10 and deltaT < m2*deltaH + c2):
+					    #if showerDebug:
+					    print "**SHOWER_new at pj:", nicetime(prevT/1000),\
+						"occStart:", nicetime(occStart/1000),\
+						"dh:", float(k["value"] - prevH), \
+						"dt:",float((k["time"] - prevT)/1000/60)
+					    noMoreShowersTillItFalls = True
+					    showerTimes.append(nicehours(occStart/1000))
+					else:
+					    if showerDebug:
+					        print "No shower at j:", nicetime(prevT/1000), "k:", nicetime(k["time"]/1000),\
+						    "cause dt=", deltaT, "dh=", deltaH
+				    elif k["value"] > prevH and occStart <> 0:
+					if showerDebug:
+					    print "No show shower at k:", nicetime(k["time"]/1000), \
+						"cause abs Kt-OS=", abs(k["time"] - occStart)/60/1000, "minutes and occStart:", nicetime(occStart/1000)
+				    else:
+				        print "Fallen through occupancy at k:", nicetime(k["time"]/1000)
+
+				else: #kH fell
+				    #print nicetime(prevT/1000), "k fell at:", nicehours(k["time"]/1000), "we should reset here"
+				    kFell = True
+			    prevK = k
+		else: # jH fell
+		    noMoreShowersTillItFalls = False
+		    #if showerDebug:
+		    #    print nicetime(j["time"]/1000), "jH fell from", prevH, "to", j["value"]
+		prevT = j["time"]
+		prevH = j["value"]
+	    prevJ = j
+
+
+	if showerTimes:
+	    showerString = "      Shower taken at: "
+            for x in showerTimes:
+	        showerString = showerString + str(x) 
+                if showerTimes.index(x) < len(showerTimes)-1:
+	            showerString = showerString + ", " 
+       	        else:
+		    showerString = showerString + "\n"
+	else:
+	    showerString = "      No showers found\n"
+
+        print showerString
+
+        print "\nDoors as an fsm"
         state = "WFDTO_U"
         prevState = "foo"
         prevEvent = {}
@@ -878,7 +993,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
             D["microwave"] = microOnTimes
             microString = "      Microwave on at: "
             for i in microOnTimes:
-                microString = microString + i + " "
+                microString = microString + i 
                 if microOnTimes.index(i) < len(microOnTimes)-1:
                     microString = microString + ", "
                 else:
@@ -892,7 +1007,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
             D["washer"] = washerOnTimes
             washerString = "      Washer on at: "
             for i in washerOnTimes:
-                washerString = washerString + i + " "
+                washerString = washerString + i 
                 if washerOnTimes.index(i) < len(washerOnTimes)-1:
                     washerString = washerString + ", "
                 else:
@@ -906,7 +1021,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
             D["oven"] = ovenOnTimes
             ovenString = "      Oven on at: "
             for i in ovenOnTimes:
-                ovenString = ovenString + i + " "
+                ovenString = ovenString + i 
                 if ovenOnTimes.index(i) < len(ovenOnTimes)-1:
                     ovenString = ovenString + ", "
                 else:
@@ -920,7 +1035,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
             D["cooker"] = cookerOnTimes
             cookerString = "      Cooker on at: "
             for i in cookerOnTimes:
-                cookerString = cookerString + i + " "
+                cookerString = cookerString + i
                 if cookerOnTimes.index(i) < len(cookerOnTimes)-1:
                     cookerString = cookerString + ", "
                 else:
@@ -935,7 +1050,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
     # this needs changing to return showerTimes
     #showerString = shower.shower("BID264", "Bridges", startTime, endTime, daysAgo)
 
-    Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + fridgeString + bedtimeString + busyString + wanderString + doorString2 + "\n"
+    Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + fridgeString + showerString + bedtimeString + busyString + wanderString + doorString2 + "\n"
     print Text 
     
     f = bid + "_" + nicedate(startTime) + "_from_6am.txt"
@@ -945,7 +1060,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
     except:
         print "Failed to write file"
 
-
+    #exit()
     # Create message container - the correct MIME type is multipart/alternative.
     try:
         msg = MIMEMultipart('alternative')
