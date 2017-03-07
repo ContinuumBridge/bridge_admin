@@ -453,6 +453,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
         gotUp = False
         uptimeString = ""
         uptimeDebug = False
+	upWindow = 20*oneMinute
         for ptx in allPIRSeries:
             if ptx["value"] == 1:
                 if (ptx["time"]/1000 > startTime 
@@ -460,21 +461,23 @@ def dyh (user, password, bid, to, db, daysago, doors):
                     and "bed" not in ptx["room"].lower() 
                     and not gotUp):
                     if uptimeDebug:
-                        print nicetime(ptx["time"]/1000), "Morning activity x in", ptx["room"]
+                        print nicetime(ptx["time"]/1000), "Potential uptime in", ptx["room"]
                     gotUpTime = ptx["time"]
                     for pty in allPIRSeries:
                         if pty["value"] == 1:
-                            if pty["time"] > gotUpTime and "bed" not in pty["room"].lower() and pty["time"] < gotUpTime + 35*60*1000:
-                                if uptimeDebug:
-                                    print nicetime(pty["time"]/1000), "Morning activity y in", pty["room"]
+                            if pty["time"] > gotUpTime and "bed" not in pty["room"].lower() and pty["time"] < gotUpTime + upWindow*1000:
                                 upCount+=1
+                                if uptimeDebug:
+                                    print nicetime(pty["time"]/1000), "Morning PIR activity in", pty["room"], "count=", upCount
                     for ptz in doorSeries:
                         if ptz["value"] == 1:
-                            if ptz["time"] > gotUpTime and ptz["time"] < gotUpTime + 35*60*1000:
-                                if uptimeDebug:
-                                    print nicetime(ptz["time"]/1000), "Morning activity y on", ptz["door"]
+                            if ptz["time"] > gotUpTime and ptz["time"] < gotUpTime + upWindow*1000:
                                 doorCount+=1
-                    if upCount >= 6 or (upCount >=4 and doorCount >= 2):
+                                if uptimeDebug:
+                                    print nicetime(ptz["time"]/1000), "Morning activity door on", ptz["door"], "Dcount=", doorCount
+
+                    #if upCount >= 6 or (upCount >5 and doorCount >= 2):
+                    if upCount + doorCount > 10:
                         uptimeString = "   Got up at " + nicehours(gotUpTime/1000) + "\n"
                         D["gotUpTime"] = nicehours(gotUpTime/1000)
                         print "Got up at", nicehours(gotUpTime/1000), "35min PIR count = ", upCount, "door=", doorCount
