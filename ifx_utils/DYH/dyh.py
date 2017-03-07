@@ -217,10 +217,10 @@ def dyh (user, password, bid, to, db, daysago, doors):
                     if doorDebug:
                         print nicetime(event["time"]/1000), event["name"], " - Door closed, state=", state, "io:", INOUT
                     if doorCloseTime - doorOpenTime > 1000*oneMinute*10:
-                        doorString2 =  doorString2 + "   " + nicehours(doorOpenTime/1000) + ": Note - door was open for "\
-                            + str((doorCloseTime - doorOpenTime)/1000/60) + " minutes\n"
+                        doorString2 =  doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Note - door was open for "\
+                            + str((doorCloseTime - doorOpenTime)/1000/60) + " minutes from " + nicehours(doorOpenTime/1000) + "\n"
                         print nicetime(event["time"]/1000), "********************** Door was open for", \
-                            (doorCloseTime - doorOpenTime)/1000/60, "minutes"
+                            (doorCloseTime - doorOpenTime)/1000/60, "minutes from", nicehours(doorOpenTime/1000)
                 elif (("pir" in event["name"].lower() and "outside" not in event["name"].lower() and event["value"] == 1)
                     or "door" in event["name"].lower()):
                     PIR = True # PIR or non-front doors
@@ -437,13 +437,13 @@ def dyh (user, password, bid, to, db, daysago, doors):
                         elif (fridgeCloseTime - fridgeOpenTime) > 30*oneMinute*1000:
                             if fridgeDebug:
                                 print "Fridge open for", (fridgeCloseTime - fridgeOpenTime)/1000/60, "minutes at", nicehours(fridgeOpenTime/1000) 
-                            fridgeString = fridgeString + "      Was the fridge open for " + str((fridgeCloseTime - fridgeOpenTime)/1000/60) + " minutes from " + nicehours(fridgeOpenTime/1000) + "?\n" 
+                            #fridgeString = fridgeString + "      Was the fridge open for " + str((fridgeCloseTime - fridgeOpenTime)/1000/60) + " minutes from " + nicehours(fridgeOpenTime/1000) + "?\n" 
                         if not fridgeDoorOpen:
                             print nicetime(fridgeCloseTime/1000), "Fridge gone from closed to closed"
                         fridgeDoorOpen = False
         if fridgeDoorOpen:
             print "Fridge door still open from", nicetime(fridgeOpenTime/1000), "?"
-            fridgeString = fridgeString + "      Was the fridge door left open at " +  nicehours(fridgeOpenTime/1000) + "?\n" 
+            #fridgeString = fridgeString + "      Was the fridge door left open at " +  nicehours(fridgeOpenTime/1000) + "?\n" 
 
 
         # uptime
@@ -947,7 +947,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
     try:
         msg = MIMEMultipart('alternative')
         #msg['Subject'] = "Activity for bridge "+bid+" from "+nicedate(startTime)+" to "+nicedate(endTime)+" (InfluxDB/"+db+")"
-        msg['Subject'] = "Activity for DYH bungalow from 6am "+nicedate(startTime)
+        msg['Subject'] = "Activity for bungalow from 6am "+nicedate(startTime)
         msg['From'] = "Bridges <bridges@continuumbridge.com>"
         recipients = to.split(',')
         [p.strip(' ') for p in recipients]
