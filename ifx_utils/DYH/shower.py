@@ -126,7 +126,7 @@ def shower (bid, db, startTime, endTime, daysago):
             prevH = 0
             prevT = 0
             noMoreShowersTillItFalls = False
-            showerDebug = False
+            showerDebug = True
             showerString = "No showers found"
             occStart = 0
             occWindow = 1000*oneMinute*20 # cause there can be a lag between occupancy and rising H
@@ -224,7 +224,9 @@ def shower (bid, db, startTime, endTime, daysago):
 						    c1 = -19
 						    m2 = 59
 						    c2 = -516
-						    if (deltaH <= 10 and deltaT < m1*deltaH +c1) or (deltaH > 10 and deltaT < m2*deltaH + c2):
+						    if (deltaT < 360 and 
+							((deltaH <= 10 and deltaT < m1*deltaH +c1) 
+							or (deltaH > 10 and deltaT < m2*deltaH + c2))):
                                                         #if showerDebug:
                                                         print "**SHOWER_new at pj:", nicetime(prevT/1000),\
                                                             "occStart:", nicetime(occStart/1000),\

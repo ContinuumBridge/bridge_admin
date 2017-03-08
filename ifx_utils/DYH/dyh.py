@@ -251,8 +251,9 @@ def dyh (user, password, bid, to, db, daysago, doors):
 					c1 = -19
 					m2 = 59
 					c2 = -516
-					if (deltaH <= 10 and deltaT < m1*deltaH +c1) or (deltaH > 10 and deltaT < m2*deltaH + c2):
-					    #if showerDebug:
+					if (deltaT < 360 and # limit the look-ahead as the rise could last for hours
+					    ((deltaH <= 10 and deltaT < m1*deltaH +c1) 
+					    or (deltaH > 10 and deltaT < m2*deltaH + c2))):
 					    print "**SHOWER_new at pj:", nicetime(prevT/1000),\
 						"occStart:", nicetime(occStart/1000),\
 						"dh:", float(k["value"] - prevH), \
