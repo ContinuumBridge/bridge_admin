@@ -186,7 +186,8 @@ def dyh (user, password, bid, to, db, daysago, doors):
         print "Showers"
 	showerDebug = False
         occStart = 0
-        occWindow = 1000*oneMinute*20 # cause there can be a lag between occupancy and rising H
+        occWindow = 1000*oneMinute*158 # cause there can be a lag between occupancy and rising H
+        #occWindow = 1000*oneMinute*20 # cause there can be a lag between occupancy and rising H
         kFell = False
         prevJ = 0
         prevK = []
@@ -637,7 +638,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
         try:
 	    with open(f, 'r') as a:
 	        A1 = json.load(a)
-            print "Got activity: file", json.dumps(A1, indent=4)
+            #print "Got activity: file", json.dumps(A1, indent=4)
         except:
             print "No activity: file"
         if not A1:
