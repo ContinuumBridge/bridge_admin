@@ -569,7 +569,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
         gotUpTime = 0
         gotUp = False
         uptimeString = ""
-        uptimeDebug = False
+        uptimeDebug = True
 	upWindow = 20*oneMinute
         for ptx in allPIRSeries:
             if ptx["value"] == 1:
@@ -594,7 +594,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
                                     print nicetime(ptz["time"]/1000), "Morning activity door on", ptz["door"], "Dcount=", doorCount
 
                     #if upCount >= 6 or (upCount >5 and doorCount >= 2):
-                    if upCount + doorCount > 10:
+                    if upCount + doorCount >= 10:
                         uptimeString = "   Got up at " + nicehours(gotUpTime/1000) + "\n"
                         D["gotUpTime"] = nicehours(gotUpTime/1000)
                         print "Got up at", nicehours(gotUpTime/1000), "35min PIR count = ", upCount, "door=", doorCount
