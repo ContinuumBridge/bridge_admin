@@ -199,6 +199,7 @@ def shower_loop(user, password, to, db, bid, daysago):
     print "\nBID:", bid, "start time:", nicetime(startTime)
     print "BID:", bid, "end time:", nicetime(endTime)
  
+    showerString = ""
     for b in bidList:
         q = "select * from /" + b + "/ where time >" + str(startTime) + "s and time <" + str(endTime) + "s"
         query = urllib.urlencode ({'q':q})
@@ -233,7 +234,6 @@ def shower_loop(user, password, to, db, bid, daysago):
         bathroomSeries.sort(key=operator.itemgetter('time'))
         #print "bS:", json.dumps(bathroomSeries,indent=4)
 
-        showerString = ""
         foo = shower(sensorList, bathroomSeries, b)
 	print "foo:", json.dumps(foo,indent=4)
         showerString = showerString + foo["showerString"]
