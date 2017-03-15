@@ -240,7 +240,7 @@ def shower_loop(user, password, to, db, bid, daysago):
 
     print showerString
 
-    exit()
+    #exit()
     # Create message container - the correct MIME type is multipart/alternative.
     try:
         msg = MIMEMultipart('alternative')
