@@ -205,8 +205,8 @@ def dyh (user, password, bid, to, db, daysago, doors):
 		continue
 	    if "binary" in j["name"].lower() and "bathroom" in j["name"].lower():
 		if j["value"] == 1: # reset occStart for every j cause k takes it to the end of longShowerWindow
-	            if showerDebug:
-			print nicetime(j["time"]/1000), "j occStart set by:",  j["name"] 
+	            #if showerDebug:
+		    #	print nicetime(j["time"]/1000), "j occStart set by:",  j["name"] 
 		    occStart = j["time"]
 
 	    if "humidity" in j["name"].lower(): 
@@ -250,11 +250,11 @@ def dyh (user, password, bid, to, db, daysago, doors):
 					# for dh >10 we allow more time to capture the sudden jumps after a long time
 					m1 = 10
 					c1 = -19
-					m2 = 59
-					c2 = -516
+					m2 = 54
+					c2 = -429
 					if (deltaT < 360 and # limit the look-ahead as the rise could last for hours
-					    ((deltaH <= 10 and deltaT < m1*deltaH +c1) 
-					    or (deltaH > 10 and deltaT < m2*deltaH + c2))):
+					    ((deltaH < 10 and deltaT < m1*deltaH +c1) 
+					    or (deltaH >= 10 and deltaT < m2*deltaH + c2))):
 					    print "**SHOWER_new at pj:", nicetime(prevT/1000),\
 						"occStart:", nicetime(occStart/1000),\
 						"dh:", float(k["value"] - prevH), \
@@ -412,7 +412,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
                         if doorDebug:
                             print "door opened whilst WFPIR"
                         state = "WFDTC"
-                        if doorOpenTime - doorCloseTime < 1000*61:
+                        if doorOpenTime - doorCloseTime < 1000*121:
                             if doorDebug:
                                 print nicetime(doorCloseTime/1000), "door opened again too soon:", \
                                     (event["time"]-doorCloseTime)/1000, "seconds later - not concluding"
@@ -505,7 +505,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
             print nicetime(event["time"]/1000), "No more events - bombed out in", state, INOUT, "with", event["value"], "on", event["name"] 
             if state == "WFPIR" and INOUT == "maybe":
                 print nicetime(event["time"]/1000), "So: Came in at", nicetime(doorCloseTime/1000), "but didn't stay and not back before 6am" 
-                doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door open, came but didn't stay and not back before 6am\n"
+                doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door open, came in but didn't stay and not back before 6am\n"
                 doorList.append({nicehours(doorCloseTime/1000):"Door open, came but didn't stay and not back before 6am"})
             elif state == "WFPIR" and INOUT == "in":
                 print nicetime(event["time"]/1000), "So: Went out at", nicetime(doorCloseTime/1000), "and not back before 6am"
@@ -569,7 +569,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
         gotUpTime = 0
         gotUp = False
         uptimeString = ""
-        uptimeDebug = True
+        uptimeDebug = False
 	upWindow = 20*oneMinute
         for ptx in allPIRSeries:
             if ptx["value"] == 1:
@@ -976,6 +976,8 @@ def dyh (user, password, bid, to, db, daysago, doors):
             D["tele"] = "no tele data"
             teleString = "      No tele data\n"
             print "no tele"
+	if teleOn:
+	    print "Looks like tele was on all night from:", nicetime(teleOnTime/1000)
         if kettleOnTimes:
             D["kettle"] = kettleOnTimes
             kettleString = "      Kettle on at: "
