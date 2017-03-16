@@ -79,7 +79,8 @@ def shower (sensorList, bathroomSeries, bid):
 	showerDebug = True
 	showerString = "No showers found"
 	occStart = 0
-	occWindow = 1000*oneMinute*20 # cause there can be a lag between occupancy and rising H
+	occWindow = 1000*oneMinute*158 # cause there can be a lag between occupancy and rising H
+	#occWindow = 1000*oneMinute*20 # cause there can be a lag between occupancy and rising H
 	kFell = False
 	g1 = 10
 	c1 = -21
@@ -96,6 +97,7 @@ def shower (sensorList, bathroomSeries, bid):
 			    # H doesn't always fall between showers so look for a small rise over 
 			    # a long time and pretend it fell. 
 			    # Catches some 2nd showers but not all
+			    """ this is in the wrong place - it halucinates 2nd showers on BID11 19/02@ 08.07
 			    if (j["value"] - prevH < 2 
 				and (j["time"] - prevT) > 18*oneMinute*1000 
 				and noMoreShowersTillItFalls 
@@ -103,6 +105,7 @@ def shower (sensorList, bathroomSeries, bid):
 				print "j", nicetime(j["time"]/1000), "nmstif:", noMoreShowersTillItFalls, "j rose by",\
 				    j["value"] - prevH, "in", (j["time"] - prevT)/1000/60, "minutes - so pretending it fell"   
 				noMoreShowersTillItFalls = False
+			    """
 			    #if showerDebug:
 			    #    print "j", nicetime(j["time"]/1000), "H Gone up by", j["value"]-prevH, "to", j["value"],\
 			    #        "in", (j["time"] - prevT)/1000/60, "minutes\n"
