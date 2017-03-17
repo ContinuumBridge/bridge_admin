@@ -27,7 +27,6 @@ import urllib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.MIMEImage import MIMEImage
-# import shower
 
 #Constants
 oneMinute          = 60
@@ -318,7 +317,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
 				m2 = 54
 				c2 = -429
 				if (deltaT < 360 and deltaH > 1 and 
-				    ((deltaH <= 10 and deltaT < m1*deltaH +c1) 
+				    ((deltaH <= 10 and deltaT <= m1*deltaH +c1) 
 				    or (deltaH > 10 and deltaT < m2*deltaH + c2))):
 				    if k["occ"]:
 				        print "**nSHOWER at :", nicetime(prevT/1000),\
