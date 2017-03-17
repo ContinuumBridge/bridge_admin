@@ -212,6 +212,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
 
 	    if "humidity" in j["name"].lower(): 
 		if prevH <> 0 and j["value"] > prevH: 
+		    """
 		    # H doesn't always fall between showers so look for a small rise over 
 		    # a long time and pretend it fell. 
 		    # Catches some 2nd showers but not all
@@ -222,6 +223,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
 			print "j", nicetime(j["time"]/1000), "nmstif:", noMoreShowersTillItFalls, "j rose by",\
 			    j["value"] - prevH, "in", (j["time"] - prevT)/1000/60, "minutes - so pretending it fell"   
 			noMoreShowersTillItFalls = False
+		    """
 		    if showerDebug:
 		        print "j", nicetime(j["time"]/1000), "H Gone up by", j["value"]-prevH, "to", j["value"],\
 		            "in", (j["time"] - prevT)/1000/60, "minutes\n"
@@ -295,7 +297,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
        	        else:
 		    showerString = showerString + "\n"
 	else:
-	    showerString = "      No showers found\n"
+	    #showerString = "      No showers found\n"
+	    showerString = ""
 
         print showerString
 
@@ -306,7 +309,6 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
         event = {}
         doorOpenTime = 0
         doorCloseTime = 0
-        #doorDebug = True
         doorString2 = "\nFront Door\n"
         pirCount = 0
         INOUT = "fubar"
@@ -339,7 +341,10 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
                             + str((doorCloseTime - doorOpenTime)/1000/60) + " minutes from " + nicehours(doorOpenTime/1000) + "\n"
                         print nicetime(event["time"]/1000), "********************** Door was open for", \
                             (doorCloseTime - doorOpenTime)/1000/60, "minutes from", nicehours(doorOpenTime/1000)
-                elif (("pir" in event["name"].lower() and "outside" not in event["name"].lower() and event["value"] == 1)
+                elif (("pir" in event["name"].lower() 
+		    and "binary" in event["name"].lower() 
+		    and "outside" not in event["name"].lower() 
+		    and event["value"] == 1)
                     or "door" in event["name"].lower()):
                     PIR = True # PIR or non-front doors
 
@@ -426,8 +431,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
                         elif INOUT == "maybe": 
                             print nicetime(doorCloseTime/1000), "** In and out at", nicetime(doorCloseTime/1000), "cause door opened again", \
                                 (event["time"]-doorCloseTime)/1000/60, "minutes later\n"
-                            #doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, came in but didn't stay (in and out?)\n"
-                            doorList.append({nicehours(doorCloseTime/1000):"Door closed, came in but didn't stay (in and out?)"}) 
+                            doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, in and out\n"
+                            doorList.append({nicehours(doorCloseTime/1000):"Door closed, in and out"}) 
                             INOUT = "out"
                         elif INOUT == "out":
                             print nicetime(doorCloseTime/1000), "** Didn't come in at", nicetime(doorCloseTime/1000), "cause door opened again", \
