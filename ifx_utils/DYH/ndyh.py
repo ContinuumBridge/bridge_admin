@@ -90,9 +90,6 @@ def dyh (user, password, bid, to, db, daysago, doors):
     i_time = 0
     i_data = 2
     D = {}
-    doorDebug = False
-    if doors:
-        doorDebug = True
     print "start time:", nicetime(startTime)
     print "end time:", nicetime(endTime)
     D["BID"] = bid
@@ -121,8 +118,10 @@ def dyh (user, password, bid, to, db, daysago, doors):
     allSeries = []
 
     # useful stuff available to everything
-    uptimeDebug = False
     doorDebug = False
+    if doors:
+        doorDebug = True
+    uptimeDebug = False
     showerDebug = False
     INOUT = "fubar"
     gotUpTime = 0
@@ -409,8 +408,9 @@ def dyh (user, password, bid, to, db, daysago, doors):
 
     # Front door
     #for pt in allSeries: # main loop
-        if "door" in pt["name"].lower() or "pir" in pt["name"].lower():
-            if "pir" in pt["name"].lower() and pt["value"] == 0:
+        if ("entry_exit" not in pt["name"].lower() and
+	    ("door" in pt["name"].lower() or "pir" in pt["name"].lower() or "movement" in pt["name"].lower())):
+            if ("pir" in pt["name"].lower()  or "movement" in pt["name"].lower()) and pt["value"] == 0:
                 continue
 	    PIR = False
 	    doorClosed = False
@@ -433,7 +433,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
 		    if doorDebug:
 		        print nicetime(pt["time"]/1000), "********************** Door was open for", \
 			    (doorCloseTime - doorOpenTime)/1000/60, "minutes"
-	    elif (("pir" in pt["name"].lower() and "outside" not in pt["name"].lower() and pt["value"] == 1)
+	    elif ((("pir" in pt["name"].lower() or "movement" in pt["name"].lower()) and "outside" not in pt["name"].lower() and pt["value"] == 1)
 		or "door" in pt["name"].lower()):
 		PIR = True # PIR or non-front doors
             #else:
@@ -608,7 +608,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
     #for pt in allSeries: # main loop
         #if pt["time"] > (startTime + 15*oneHour)*1000 and pt["time"] < 1000*(startTime + 20*oneHour) and not inBed:
         if pt["time"] > (startTime + 15*oneHour)*1000 and pt["time"] < 1000*endTime and not inBed:
-            if ("pir" in pt["name"].lower()
+            if (("pir" in pt["name"].lower() or "movement" in pt["name"].lower())
 	        and "binary" in pt["name"].lower()
 	        and "bedroom" not in pt["name"].lower()
 	        and pt["value"] == 1):
