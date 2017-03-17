@@ -116,13 +116,14 @@ def dyh (user, password, bid, to, db, daysago, doors):
     pts = r.json()
     #print json.dumps(r.json(), indent=4)
 
-    Text = "\nSummary of " + nicedate(startTime) + " from 6am\n"
+    Text = "Event Driven Version\nSummary of " + nicedate(startTime) + " from 6am\n"
     selectedSeries = []
     allSeries = []
 
     # useful stuff available to everything
     uptimeDebug = False
     doorDebug = False
+    showerDebug = False
     INOUT = "fubar"
     gotUpTime = 0
     gotUp = False
@@ -145,7 +146,6 @@ def dyh (user, password, bid, to, db, daysago, doors):
 
     prevpt = {}
 
-    print "Doors as an fsm"
     state = "WFDTO_U"
     prevState = "foo"
     prevEvent = {}
@@ -179,6 +179,56 @@ def dyh (user, password, bid, to, db, daysago, doors):
     bStr = "weeble" #"bedtime"
     # tv
     teleOnTimes = []
+    # Appliances
+    washerOn = False
+    washerOffTime = 0
+    washerOnTime = 0
+    washerOnTimes = []
+    appliancesString = ""
+    ovenOn = False
+    ovenOnTimes = []
+    ovenOnTime = 0
+    ovenString = ""
+    cookerOn = False
+    cookerOnTimes = []
+    cookerOnTime = 0
+    cookerString = ""
+    kettleOnTimes = []
+    kettleString = ""
+    kettleOnTime = 0
+    prevKettlePower = -1
+    kettleOn = False
+    teleOnTimes = []
+    #teleOnFor = []
+    teleOnTime = 0
+    teleOn = False
+    teleString = ""
+    microOnTimes = []
+    microOnTime = 0
+    microString = ""
+    toasterOnTimes = []
+    toasterOnTime = 0
+    toasterString = ""
+    # showers
+    bathroomSeries =[] 
+    showerTimes = []
+    prevK = []
+    prevH = 0
+    prevT = 0
+    prevjH = 0
+    prevjT = 0
+    noMoreShowersTillItFalls = False
+    showerString = "No showers found"
+    occupied = False
+    occStart = 0
+    #occWindow = 1000*oneMinute*20 # cause there can be a lag between occupancy and rising H
+    occWindow = 1000*oneMinute*158 # cause there can be a lag between occupancy and rising H
+    # lights
+    bathLuma = 0
+    bedLuma = 0
+    loungeLuma = 0
+    lumaWarning = False
+    lumaStr = ""
 
     f = bid + "n_activity"
     try:
@@ -199,10 +249,103 @@ def dyh (user, password, bid, to, db, daysago, doors):
             #print nicetime(pt["time"]/1000), "*** Ignoring duplicate event", pt["value"], "on", pt["name"]
             continue
         prevpt = pt
-        # appliances
-    # showers
 
-    # tv
+    # lights
+        if "lum" in pt["name"].lower():
+	    if "bathroom" in pt["name"].lower():
+	        bathLuma = pt["value"]
+	    elif "bedroom" in pt["name"].lower():
+		bedLuma = pt["value"]
+	    elif "lounge" in pt["name"].lower():
+		loungeLuma = pt["value"]
+	    if inBed and pt["time"] > bedtime + oneHour*1000: 
+		if bathLuma > 10:
+		    lumaStr = lumaStr + "bathroom "
+	        if loungeLuma > 10:
+		    lumaStr = lumaStr + "lounge "
+
+
+    # showers
+    #for pt in allSeries: # main loop
+	if (("bathroom" in pt["name"].lower() or "shower" in pt["name"].lower())
+	    and "binary" in pt["name"].lower()
+	    and pt["value"] == 1): # reset occStart for every p 
+	    #if not occupied:
+	    #	print nicetime(pt["time"]/1000), "occStart set by:",  pt["name"] 
+	    occupied = True
+	    occStart = pt["time"]
+	elif pt["time"] > occStart + occWindow: # noise from everything else as a clock
+	    #if occupied:
+	    #	print nicetime(pt["time"]/1000), "empty set by:",  pt["name"] 
+	    occupied = False
+
+	if (("bathroom" in pt["name"].lower() or "shower" in pt["name"].lower())
+	    and "humidity" in pt["name"].lower()):
+            if prevH <> 0 and pt["value"] > prevH: 
+		bathroomSeries.append({"time": pt["time"], "value": pt["value"], "occ":occupied})
+		if showerDebug:
+		    print nicetime(pt["time"]/1000), "H risen from", prevH, "to", pt["value"], "occ:", occupied
+	    else: # p H fell
+		if len(bathroomSeries) > 1 and not noMoreShowersTillItFalls:
+		    if showerDebug:
+			for i in bathroomSeries:
+			    print nicetime(i["time"]/1000), "i", i["value"]
+		    for j in bathroomSeries:
+			if showerDebug:
+			    print nicetime(j["time"]/1000), "j", j["value"], "nmstif:",noMoreShowersTillItFalls 
+			#if (j["value"] - prevjH < 2  this is in the wrong place
+			#    and (j["time"] - prevjT) > 18*oneMinute*1000 
+			#    and noMoreShowersTillItFalls):
+			#    #and pt["time"]>occStart):
+			#    print nicetime(j["time"]/1000), "nmstif:", noMoreShowersTillItFalls, "h rose by",\
+		        #	j["value"] - prevjH, "at", nicetime(prevjT/1000), "in", (j["time"] - prevjT)/1000/60, "minutes - so pretending it fell"   
+			#    noMoreShowersTillItFalls = False
+			#else:
+			#    print "not pretending dh:",j["value"] - prevH, "dt:",(j["time"] - prevT)/1000/60, "mins"  
+			prevjH = j["value"]
+			prevjT = j["time"]
+		        for k in bathroomSeries: 
+			    if k["time"] > j["time"] and not noMoreShowersTillItFalls:
+				if showerDebug:
+				    print "                    k", k["value"], "at", nicetime(k["time"]/1000), "with occStart at",\
+					nicetime(occStart/1000), "k_occ:", k["occ"]
+				deltaT = (k["time"] - j["time"])/1000/60
+				deltaH = k["value"] - j["value"] 
+				# two gradients
+				# for dh under 10, we require shorter times (dt = m1*dh + c1)
+				# for dh >10 we allow more time to capture the sudden jumps after a long time
+				m1 = 10
+				c1 = -19
+				m2 = 54
+				c2 = -429
+				if (deltaT < 360 and deltaH > 1 and 
+				    ((deltaH <= 10 and deltaT < m1*deltaH +c1) 
+				    or (deltaH > 10 and deltaT < m2*deltaH + c2))):
+				    if k["occ"]:
+				        print "**nSHOWER at :", nicetime(prevT/1000),\
+					    "k_time:", nicetime(k["time"]/1000),\
+  					    "dh:", k["value"] - j["value"], \
+					    "dt:",(k["time"] - j["time"])/1000/60
+				        noMoreShowersTillItFalls = True
+				        showerTimes.append(k["time"])
+				    else:
+					if showerDebug:
+					    print "No show shower at j:", nicetime(j["time"]/1000), "k:", nicetime(k["time"]/1000),\
+						"cause dt=", deltaT, "dh=", deltaH
+				else:
+				    if showerDebug:
+					print "No shower at j:", nicetime(j["time"]/1000), "k:", nicetime(k["time"]/1000),\
+					"cause dt=", deltaT, "dh=", deltaH
+	        noMoreShowersTillItFalls = False
+	        bathroomSeries = [{"time": pt["time"], "value": pt["value"]}]
+       	        #if showerDebug:
+	        #    print nicetime(pt["time"]/1000), "H fell from", prevH, "to", pt["value"]
+	    prevT = pt["time"]
+	    prevH = pt["value"]
+
+
+
+    # tv and appliances
     #for pt in allSeries: # main loop
 	if "tv" in pt["name"].lower() and "power" in pt["name"].lower():
 	    if pt["value"] > 10 and not teleOn:
@@ -217,6 +360,52 @@ def dyh (user, password, bid, to, db, daysago, doors):
 		else:
 		    print "Warning: tele went off twice"
 		teleOn = False
+	if "oven" in pt["name"].lower() and "power" in pt["name"].lower():
+	    if pt["value"] > 300:
+		if pt["time"] > ovenOnTime + 10*oneMinute*1000:
+		    ovenOnTimes.append(nicehours(pt["time"]/1000))
+		    print "oven on at", nicehours(pt["time"]/1000), "power:", pt["value"], "on", pt["name"]
+		ovenOnTime = pt["time"]
+	if "cooker" in pt["name"].lower() and "power" in pt["name"].lower()and "power" :
+	    if pt["value"] > 300:
+		if pt["time"] > cookerOnTime + 10*oneMinute*1000:
+		    #print "cooker on at", nicehours(pt["time"]/1000), "power:", pt["value"]
+		    cookerOnTimes.append(nicehours(pt["time"]/1000))
+		cookerOnTime = pt["time"]
+	if "washer" in pt["name"].lower() and "power" in pt["name"].lower()and "power" :
+	    if pt["value"] > 200:
+		if pt["time"] > washerOnTime + 15*oneMinute*1000:
+		    washerOnTimes.append(nicehours(pt["time"]/1000))
+		    #print "washer on at", nicehours(pt["time"]/1000), "power:", pt["value"]
+		washerOnTime = pt["time"]
+	if "microwave" in pt["name"].lower()and "power" in pt["name"].lower():
+	    if pt["value"] > 1000:
+		if pt["time"] > microOnTime + 5*oneMinute*1000:
+		    microOnTimes.append(nicehours(pt["time"]/1000))
+		    #print "microwave on at", nicehours(pt["time"]/1000), "power:", pt["value"]
+		microOnTime = pt["time"]
+	if "kettle"  in pt["name"].lower()and "power" in pt["name"].lower():
+	    if pt["value"] == prevKettlePower:
+		print "Kettle point", nicehours(pt["time"]/1000), "kettle point ignored. Power:", pt["value"]
+	    elif pt["value"] > 1000:
+		if pt["time"] > kettleOnTime + 5*oneMinute*1000:
+		    if kettleOn: # Odd behaviour on the kettle - doesn't always go off in between ons, Probably due to zwave reset
+			print "WARNING: Kettle already on at", nicehours(pt["time"]/1000), "power:", pt["value"], "ignoring and setting to off"
+			kettleOn = False
+		    else:
+			kettleOnTimes.append(nicehours(pt["time"]/1000))
+			kettleOn = True
+			print "Kettle on at", nicehours(pt["time"]/1000), "power:", pt["value"]
+		kettleOnTime = pt["time"]
+	    else:
+		kettleOn = False
+	    prevKettlePower = pt["value"]
+	if "toaster"  in pt["name"].lower()and "power" in pt["name"].lower():
+	    if pt["value"] > 1000:
+		if pt["time"] > toasterOnTime + 5*oneMinute*1000:
+		    toasterOnTimes.append(nicehours(pt["time"]/1000))
+		    #print "toaster on at", nicehours(pt["time"]/1000), "power:", pt["value"]
+		toasterOnTime = pt["time"]
 
     # Front door
     #for pt in allSeries: # main loop
@@ -239,7 +428,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
 		if doorDebug:
 		    print nicetime(pt["time"]/1000), pt["name"], " - Door closed, state=", state, "io:", INOUT
 		if doorCloseTime - doorOpenTime > 1000*oneMinute*10:
-		    doorString2 =  doorString2 + "   " + nicehours(doorOpenTime/1000) + ": Note - door was open for "\
+		    doorString2 =  doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Note - door was open for "\
 			+ str((doorCloseTime - doorOpenTime)/1000/60) + " minutes\n"
 		    if doorDebug:
 		        print nicetime(pt["time"]/1000), "********************** Door was open for", \
@@ -435,6 +624,8 @@ def dyh (user, password, bid, to, db, daysago, doors):
 			    "delayMins=",(pt["time"] - latestOne["time"])/1000/60 
 			inBed = True
 			bedTime = latestOne["time"]
+			if teleOn:
+			    bedtimeString = bedtimeString + " (but TV still on)"
 		    #else:
 		    #	print "not gone to bed at", nicetime(latestOne["time"]/1000), "cause delay mins = ", (pt["time"] - latestOne["time"])/1000/60
         # wanders
@@ -451,7 +642,8 @@ def dyh (user, password, bid, to, db, daysago, doors):
 		print nicetime(pt["time"]/1000), "new wander in", pt["name"], "bedtime:", nicetime(bedTime/1000)
 	    #else:
 	    #    print nicetime(w["time"]/1000), "No wander in", w["name"], "bedtime:", nicetime(bedtime/1000)
-        else:
+        """
+	else:
 	    bStr = "1am"
 	    if (pt["time"] > (startTime + oneHour*19)*1000 # look after 1am if no bedtime
 		and "bedroom" not in pt["name"].lower()
@@ -462,6 +654,19 @@ def dyh (user, password, bid, to, db, daysago, doors):
 		wanderStart = pt["time"]
 		wanderTimes.append(nicehours(wanderStart/1000))
 		print nicetime(pt["time"]/1000), "new wander in", pt["name"], "no bedtime:"
+	"""
+    # end of showers
+    if showerTimes:
+	showerString = "      Shower taken at: "
+	for x in showerTimes:
+	    showerString = showerString + nicehours(x/1000) 
+	    if showerTimes.index(x) < len(showerTimes)-1:
+		showerString = showerString + ", " 
+	    else:
+		showerString = showerString + "\n"
+    else:
+	showerString = "      No showers found\n"
+
     # end of tv
     if teleOnTimes:
 	D["tele"] = teleOnTimes
@@ -475,6 +680,78 @@ def dyh (user, password, bid, to, db, daysago, doors):
 	print "no tele"
     if teleOn:
 	print "Looks like tele was on all night from:", nicetime(teleOnTime/1000)
+    # end of appliances
+    if kettleOnTimes:
+	D["kettle"] = kettleOnTimes
+	kettleString = "      Kettle on at: "
+	for i in kettleOnTimes:
+	    kettleString = kettleString + i
+	    if kettleOnTimes.index(i) < len(kettleOnTimes)-1:
+		kettleString = kettleString + ", "
+	    else:
+		kettleString = kettleString + "\n"
+	    print "     Kettle on at", i
+	#kettleString = kettleString + "\n"
+    else:
+	D["kettle"] = "No kettle data"
+	kettleString = "      No kettle data\n"
+	print "      no kettle data"
+    if microOnTimes:
+	D["microwave"] = microOnTimes
+	microString = "      Microwave on at: "
+	for i in microOnTimes:
+	    microString = microString + i 
+	    if microOnTimes.index(i) < len(microOnTimes)-1:
+		microString = microString + ", "
+	    else:
+		microString = microString + "\n"
+	    print "     Microwave on at", i
+    else:
+	D["microwave"] = "No microwave data"
+	microString = "      No microwave\n"
+	print "      no microwave"
+    if washerOnTimes:
+	D["washer"] = washerOnTimes
+	washerString = "      Washer on at: "
+	for i in washerOnTimes:
+	    washerString = washerString + i 
+	    if washerOnTimes.index(i) < len(washerOnTimes)-1:
+		washerString = washerString + ", "
+	    else:
+		washerString = washerString + "\n"
+	    print "     Washer on at", i
+    else:
+	D["washer"] = "no washer data"
+	washerString = "      No washer\n"
+	print "      no washer"
+    if ovenOnTimes:
+	D["oven"] = ovenOnTimes
+	ovenString = "      Oven on at: "
+	for i in ovenOnTimes:
+	    ovenString = ovenString + i 
+	    if ovenOnTimes.index(i) < len(ovenOnTimes)-1:
+		ovenString = ovenString + ", "
+	    else:
+		ovenString = ovenString + "\n"
+	    print "     Oven on at", i
+    else:
+	D["oven"] = "no oven data"
+	ovenString = "      No oven\n"
+	print "      no oven"
+    if cookerOnTimes:
+	D["cooker"] = cookerOnTimes
+	cookerString = "      Cooker on at: "
+	for i in cookerOnTimes:
+	    cookerString = cookerString + i
+	    if cookerOnTimes.index(i) < len(cookerOnTimes)-1:
+		cookerString = cookerString + ", "
+	    else:
+		cookerString = cookerString + "\n"
+	    print "     Cooker on at", i
+    else:
+	D["oven"] = "no cooker data"
+	cookerString = "      No cooker\n"
+	print "      no cooker"
 
     # end of bedtime and wanders
     if wanderTimes:
@@ -567,9 +844,9 @@ def dyh (user, password, bid, to, db, daysago, doors):
 
     # end of doors: needs to run after we've been through all the points
     if not pt:
-	print "No events - quiet day!!" 
+	print "Doors: No events - quiet day!!" 
     else:
-	print nicetime(pt["time"]/1000), "No more events - bombed out in", state, INOUT, "with", pt["value"], "on", pt["name"] 
+	print nicetime(pt["time"]/1000), "Doors: No more events - bombed out in", state, INOUT, "with", pt["value"], "on", pt["name"] 
 	if state == "WFPIR" and INOUT == "maybe":
 	    print nicetime(pt["time"]/1000), "So: Came in at", nicetime(doorCloseTime/1000), "but didn't stay and not back before 6am" 
 	    doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, came but didn't stay and not back before 6am\n"
@@ -584,16 +861,21 @@ def dyh (user, password, bid, to, db, daysago, doors):
 	elif state == "WFDTO" and INOUT == "in":
 	    print nicetime(pt["time"]/1000), "and stayed in"
 	else:
-	    print nicetime(pt["time"]/1000), "Bombed out in", state, "whilst IO=", INOUT 
+	    print nicetime(pt["time"]/1000), "Doors: Bombed out in", state, "whilst IO=", INOUT 
 
     D["Front Door"] = doorList
 
+    # end of lights
+    if not lumaWarning:
+        print "Gone to bed with", lumaStr, "lights on?"
+	lumaWarning = True
 
-    Text = Text + uptimeString + teleString + bedtimeString + busyString + wanderString + doorString2 + "\n"
-    #Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + fridgeString + bedtimeString + busyString + wanderString + doorString2 + "\n"
+    #Text = Text + uptimeString + teleString + bedtimeString + busyString + wanderString + doorString2 + "\n"
+    Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + showerString + bedtimeString + busyString + wanderString + doorString2 + "\n"
+    #+ fridgeString 
     print Text 
     
-    exit()
+    #exit()
     #print "D:", json.dumps(D, indent=4)
     #f = bid + "_" + nicedate(startTime) + "_from_6am.txt"
     #try:
@@ -606,7 +888,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
     # Create message container - the correct MIME type is multipart/alternative.
     try:
         msg = MIMEMultipart('alternative')
-        #msg['Subject'] = "Activity for bridge "+bid+" from "+nicedate(startTime)+" to "+nicedate(endTime)+" (InfluxDB/"+db+")"
+        #msg['Subject'] = "Event Driven Activity for bridge "+bid+" from "+nicedate(startTime)+" to "+nicedate(endTime)+" (InfluxDB/"+db+")"
         msg['Subject'] = "Activity for DYH bungalow from 6am "+nicedate(startTime)
         msg['From'] = "Bridges <bridges@continuumbridge.com>"
         recipients = to.split(',')
