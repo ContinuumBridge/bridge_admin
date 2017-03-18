@@ -595,7 +595,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
 	    slot = "Night"
 	else:
 	    print "**** business: something's wrong with the time"
-	if ("pir" in pt["name"].lower()
+	if (("pir" in pt["name"].lower() or "movement" in pt["name"].lower())
 	    and "binary" in pt["name"].lower()
 	    and pt["value"] == 1):
             if "bedroom" in pt["name"].lower():
@@ -641,7 +641,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
 	    bStr = "bedtime"
 	    if (pt["time"] > bedTime + 1000*oneMinute
 		and "bedroom" not in pt["name"].lower()
-		and ("pir" in pt["name"].lower() or "door" in pt["name"].lower())
+		and ("pir" in pt["name"].lower() or "door" in pt["name"].lower() or "movement" in pt["name"].lower())
 		and "binary" in pt["name"].lower()
 		and pt["value"] == 1 
 		and pt["time"] > wanderStart + wanderWindow*1000):
@@ -874,7 +874,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
     D["Front Door"] = doorList
 
     # end of lights
-    if not lumaWarning:
+    if lumaStr and not lumaWarning:
         print "Gone to bed with", lumaStr, "lights on?"
 	lumaWarning = True
 
