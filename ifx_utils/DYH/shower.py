@@ -76,7 +76,7 @@ def shower (sensorList, bathroomSeries, bid):
 	prevH = 0
 	prevT = 0
 	noMoreShowersTillItFalls = False
-	showerDebug = True
+	showerDebug = False
 	showerString = "No showers found"
 	occStart = 0
 	occWindow = 1000*oneMinute*158 # cause there can be a lag between occupancy and rising H
@@ -136,7 +136,7 @@ def shower (sensorList, bathroomSeries, bid):
 						m2 = 54
 						c2 = -429
 						if (deltaT < 360 and 
-						    ((deltaH <= 10 and deltaT < m1*deltaH +c1) 
+						    ((deltaH <= 10 and deltaT <= m1*deltaH +c1) 
 						    or (deltaH > 10 and deltaT < m2*deltaH + c2))):
 						    #if showerDebug:
 						    print "**SHOWER_new at pj:", nicetime(prevT/1000),\

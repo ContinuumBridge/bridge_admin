@@ -27,7 +27,6 @@ import urllib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.MIMEImage import MIMEImage
-# import shower
 
 #Constants
 oneMinute          = 60
@@ -318,7 +317,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
 				m2 = 54
 				c2 = -429
 				if (deltaT < 360 and deltaH > 1 and 
-				    ((deltaH <= 10 and deltaT < m1*deltaH +c1) 
+				    ((deltaH <= 10 and deltaT <= m1*deltaH +c1) 
 				    or (deltaH > 10 and deltaT < m2*deltaH + c2))):
 				    if k["occ"]:
 				        print "**nSHOWER at :", nicetime(prevT/1000),\
@@ -408,8 +407,9 @@ def dyh (user, password, bid, to, db, daysago, doors):
 
     # Front door
     #for pt in allSeries: # main loop
-        if ("entry_exit" not in pt["name"].lower() and
-	    ("door" in pt["name"].lower() or "pir" in pt["name"].lower() or "movement" in pt["name"].lower())):
+        if ("entry_exit" not in pt["name"].lower() 
+	    and "binary" in pt["name"].lower() 
+	    and ("door" in pt["name"].lower() or "pir" in pt["name"].lower() or "movement" in pt["name"].lower())):
             if ("pir" in pt["name"].lower()  or "movement" in pt["name"].lower()) and pt["value"] == 0:
                 continue
 	    PIR = False
@@ -433,9 +433,14 @@ def dyh (user, password, bid, to, db, daysago, doors):
 		    if doorDebug:
 		        print nicetime(pt["time"]/1000), "********************** Door was open for", \
 			    (doorCloseTime - doorOpenTime)/1000/60, "minutes"
-	    elif ((("pir" in pt["name"].lower() or "movement" in pt["name"].lower()) and "outside" not in pt["name"].lower() and pt["value"] == 1)
+	    elif ((("pir" in pt["name"].lower() or "movement" in pt["name"].lower()) 
+		and "binary" in pt["name"].lower() 
+		and "outside" not in pt["name"].lower() 
+		and pt["value"] == 1)
 		or "door" in pt["name"].lower()):
 		PIR = True # PIR or non-front doors
+		if doorDebug:
+		    print nicetime(pt["time"]/1000), "PIR set by:", pt["name"]
             #else:
             #	print nicetime(pt["time"]/1000), "mystery point on:", pt["name"]
 	    prevState = state
@@ -529,8 +534,8 @@ def dyh (user, password, bid, to, db, daysago, doors):
 			if doorDebug:
 			    print nicetime(doorCloseTime/1000), "** In and out at", nicetime(doorCloseTime/1000), "cause door opened again", \
 			        (pt["time"]-doorCloseTime)/1000/60, "minutes later\n"
-			#doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, came in but didn't stay (in and out?)\n"
-			doorList.append({nicehours(doorCloseTime/1000):"Door closed, came in but didn't stay (in and out?)"}) 
+			doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, in and out\n"
+			doorList.append({nicehours(doorCloseTime/1000):"Door closed, in and out"}) 
 			INOUT = "out"
 		    elif INOUT == "out":
 			if doorDebug:
