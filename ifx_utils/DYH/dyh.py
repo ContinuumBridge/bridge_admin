@@ -90,9 +90,10 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
     i_time = 0
     i_data = 2
     D = {}
-    doorDebug = False
     if doors:
         doorDebug = True
+    else:
+	doorDebug = False
     print "start time:", nicetime(startTime)
     print "end time:", nicetime(endTime)
     D["BID"] = bid
@@ -329,14 +330,18 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
                     doorOpened = True
                     doorOpenTime = event["time"]
                     if doorDebug:
-                        print nicetime(event["time"]/1000), event["name"], " - Door opened, state=", state, "io:", INOUT
+                        print nicetime(event["time"]/1000), event["name"], " - Door opened, state=", state, "io:", INOUT, "PIR:", PIR
                 elif ("front" in event["name"].lower() and event["value"] == 0 or
                     ("utility" in event["name"].lower() and "door" in event["name"].lower()) and event["value"] == 0):
                     doorClosed = True
                     doorCloseTime = event["time"]
                     if doorDebug:
-                        print nicetime(event["time"]/1000), event["name"], " - Door closed, state=", state, "io:", INOUT
-                    if doorCloseTime - doorOpenTime > 1000*oneMinute*10:
+                        print nicetime(event["time"]/1000), event["name"], " - Door closed, state=", state, "io:", INOUT, "PIR:", PIR
+                    if doorOpenTime == 0:
+			if doorDebug:
+			    print nicetime(event["time"]/1000), event["name"],\
+				" - Door closed before opening! \nSo we'll pretend it didn't happen and wait for it to open"
+		    elif doorCloseTime - doorOpenTime > 1000*oneMinute*10:
                         doorString2 =  doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Note - door was open for "\
                             + str((doorCloseTime - doorOpenTime)/1000/60) + " minutes from " + nicehours(doorOpenTime/1000) + "\n"
                         print nicetime(event["time"]/1000), "********************** Door was open for", \
@@ -347,6 +352,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
 		    and event["value"] == 1)
                     or "door" in event["name"].lower()):
                     PIR = True # PIR or non-front doors
+		    if doorDebug:
+			print nicetime(event["time"]/1000), "PIR set by:", event["name"]
 
                 prevState = state
                 
@@ -358,7 +365,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
                         INOUT = "out"
                         state = "WFDTC"
                     elif doorClosed:
-                        state = "ERROR"
+                        #state = "ERROR"
+                        state = "WFDTO_U"
                 elif state == "WFDTO":
                     #if doorDebug:
                     #    print nicetime(event["time"]/1000), state, event["value"], "on", event["name"]
@@ -443,63 +451,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
                         else:
                             print nicetime(event["time"]/1000), "Strange value in WFPIR. INOUT:", INOUT
 
-                #elif state == "WFPIR_OUT":
-                #    if doorDebug:
-                #        print nicetime(event["time"]/1000), state, event["value"], "on", event["name"],"..."
-                #    if PIR and event["time"] > doorCloseTime + 20*1000:
-                #        print nicetime(doorCloseTime/1000), "Came in - waited", (event["time"] - doorCloseTime)/1000/60, "minutes for PIR"
-                #        INOUT = "in"
-                #        state = "WFDTO"
-                #    elif doorOpened:
-                #        print nicetime(doorCloseTime/1000), "Didn't come in - cause door opened again", \
-                #            (event["time"]-doorCloseTime)/1000/60, "minutes later"
-                #        INOUT = "out"
-                #        state = "WFDTC"
-                #elif state == "WFPIR_IN":
-                #    if doorDebug:
-                #        print nicetime(event["time"]/1000), state, event["value"], "on", event["name"], pirCount
-                #    if PIR and event["time"] > doorCloseTime + 20*1000 and event["time"] - doorCloseTime < 1000*30*oneMinute:
-                #        pirCount+=1
-                #    if pirCount >= 1:
-                #        print nicetime(doorCloseTime/1000), "Didn't leave - waited ", (event["time"] - doorCloseTime)/1000/60, "minutes for PIR"
-                #        INOUT = "in"
-                #        state = "WFDTO"
-                #        pirCount = 0
-                #    elif doorOpened:
-                #        if doorOpenTime - doorCloseTime < 1000*41:
-                #            print nicetime(doorCloseTime/1000), "door opened again too soon:", \
-                #                (event["time"]-doorCloseTime)/1000, "seconds later - not concluding"
-                #            INOUT = "in"
-                #            state = "WFDTC"
-                #        else:
-                #            print nicetime(doorCloseTime/1000), "Went out - cause door opened again", \
-                #                (event["time"]-doorCloseTime)/1000, "seconds later"
-                #            INOUT = "out"
-                #            state = "WFDTC"
-                #    elif PIR and event["time"] > doorCloseTime + 20*1000 and event["time"] - doorCloseTime > 1000*oneHour*2:
-                #        print nicetime(doorCloseTime/1000), "Didn't leave - but no activity for", \
-                #            (event["time"] - doorCloseTime)/1000/60, "minutes"
-                #        INOUT = "in"
-                #        state = "WFDTO"
-                #elif state == "WFPIR_MaybeIN":
-                #    if doorDebug:
-                #        print nicetime(event["time"]/1000), state, event["value"], "on", event["name"],"..."
-                #    if PIR and event["time"] > doorCloseTime + 20*1000:
-                #        print nicetime(doorCloseTime/1000), "Came in - waited", (event["time"] - doorCloseTime)/1000/60, "minutes for PIR"
-                #        INOUT = "in"
-                #        state = "WFDTO"
-                #    elif doorOpened:
-                #        if doorOpenTime - doorCloseTime < 1000*41:
-                #            print nicetime(doorCloseTime/1000), "door opened again too soon:", \
-                #                (event["time"]-doorCloseTime)/1000, "seconds later - not concluding"
-                #        else:
-                #            print nicetime(doorCloseTime/1000), "Didn't come in - cause door opened again", \
-                #                (event["time"]-doorCloseTime)/1000/60, "minutes later"
-                #        INOUT = "out"
-                #        state = "WFDTC"
-
                 elif state == "ERROR":
-                    print nicetime(event["time"]/1000), state, "Somethings wrong!"
+                    print nicetime(event["time"]/1000), state, "Somethings wrong with doors!"
                     print nicetime(event["time"]/1000), state, event["value"], "on", event["name"]
                     
                 else:
@@ -603,11 +556,11 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
                     if upCount + doorCount >= 10:
                         uptimeString = "   Got up at " + nicehours(gotUpTime/1000) + "\n"
                         D["gotUpTime"] = nicehours(gotUpTime/1000)
-                        print "Got up at", nicehours(gotUpTime/1000), "35min PIR count = ", upCount, "door=", doorCount
+                        print "Got up at", nicehours(gotUpTime/1000), upWindow/60, "min PIR count = ", upCount, "door=", doorCount
                         gotUp = True
                     else:
                         if uptimeDebug:
-                            print "not got up at", nicetime(gotUpTime/1000), "35min PIR count = ", upCount, "door=", doorCount
+                            print "not got up at", nicetime(gotUpTime/1000), upWindow/60, "PIR count = ", upCount, "door=", doorCount
                         upCount = 0
                         doorCount = 0
         if allPIRSeries and not gotUp:   
