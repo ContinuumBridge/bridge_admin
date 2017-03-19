@@ -117,6 +117,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
     allSeries = []
 
     # useful stuff available to everything
+    bedtimeDebug = False
     doorDebug = False
     if doors:
         doorDebug = True
@@ -560,7 +561,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
                 and not gotUp):
                 if len(upFifo) <= 10:
                     if uptimeDebug:
-                        print nicetime(pt["time"]/1000), "Appending morning activity x in", pt["name"]
+                        print nicetime(pt["time"]/1000), "Appending morning activity on", pt["name"]
                     gotUpTime = pt["time"]
                     upFifo.append(gotUpTime)
                 else:
@@ -572,6 +573,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
 			    print nicetime(i/1000)
 		    #print "len:", len(upFifo), "last:", nicetime(last/1000), "popped last:", nicetime(first/1000)
 		    #print "last-first:", nicehours(last/1000), "-", nicehours(first/1000), "=", (last-first)/1000/60, "minutes"
+		    # For the general case (any bridge), this needs to depend on a history of aggregate activity. Not just 26mins
 		    if (last-first) <= 1000*oneMinute*26:
 			gotUp = True
 			gotUpTime = first
@@ -580,7 +582,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
 			print "*** Got up at:", nicetime(first/1000), "dt=", (last-first)/1000/60, "minutes"
 		    else:
                         if uptimeDebug:
-			    print "Rejecting:", nicetime(first/1000), "cause it's 10 items in", (last-first)/1000/60, "minutes"
+			    print "Rejecting:", nicetime(first/1000), "cause it's 10 items in", (last-first)/1000/60, "minutes (need 26mins)"
     #busyness - just count the ones 
     #for pt in allSeries: # main loop
         if pt["time"] > startTime*1000 and pt["time"] <= 1000*(startTime + 6*oneHour):
@@ -593,7 +595,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
 	    slot = "Night"
 	else:
 	    print "**** business: something's wrong with the time"
-	if ("pir" in pt["name"].lower()
+	if (("pir" in pt["name"].lower() or "movement" in pt["name"].lower())
 	    and "binary" in pt["name"].lower()
 	    and pt["value"] == 1):
             if "bedroom" in pt["name"].lower():
@@ -612,13 +614,14 @@ def dyh (user, password, bid, to, db, daysago, doors):
     # bedtime and wanders
     #for pt in allSeries: # main loop
         #if pt["time"] > (startTime + 15*oneHour)*1000 and pt["time"] < 1000*(startTime + 20*oneHour) and not inBed:
-        if pt["time"] > (startTime + 15*oneHour)*1000 and pt["time"] < 1000*endTime and not inBed:
+        if pt["time"] > (startTime + 14*oneHour)*1000 and pt["time"] < 1000*endTime and not inBed:
             if (("pir" in pt["name"].lower() or "movement" in pt["name"].lower())
 	        and "binary" in pt["name"].lower()
 	        and "bedroom" not in pt["name"].lower()
 	        and pt["value"] == 1):
-                latestOne = pt # the latest non-bedroom PIR activity
-                # print nicetime(pt["time"]/1000), "potential latestOne at", nicetime(pt["time"]/1000), "in", pt["name"]
+                latestOne = pt # a potential latest non-bedroom PIR activity
+                if bedtimeDebug:
+		    print nicetime(pt["time"]/1000), "potential latestOne at", nicetime(pt["time"]/1000), "in", pt["name"]
 	    else: # use noise from everything else to give us the time
 		# print nicetime(pt["time"]/1000), "tick set by:", pt["name"] 
 		if latestOne:
@@ -638,7 +641,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
 	    bStr = "bedtime"
 	    if (pt["time"] > bedTime + 1000*oneMinute
 		and "bedroom" not in pt["name"].lower()
-		and ("pir" in pt["name"].lower() or "door" in pt["name"].lower())
+		and ("pir" in pt["name"].lower() or "door" in pt["name"].lower() or "movement" in pt["name"].lower())
 		and "binary" in pt["name"].lower()
 		and pt["value"] == 1 
 		and pt["time"] > wanderStart + wanderWindow*1000):
@@ -871,7 +874,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
     D["Front Door"] = doorList
 
     # end of lights
-    if not lumaWarning:
+    if lumaStr and not lumaWarning:
         print "Gone to bed with", lumaStr, "lights on?"
 	lumaWarning = True
 
@@ -880,7 +883,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
     #+ fridgeString 
     print Text 
     
-    #exit()
+    exit()
     #print "D:", json.dumps(D, indent=4)
     #f = bid + "_" + nicedate(startTime) + "_from_6am.txt"
     #try:
@@ -893,8 +896,8 @@ def dyh (user, password, bid, to, db, daysago, doors):
     # Create message container - the correct MIME type is multipart/alternative.
     try:
         msg = MIMEMultipart('alternative')
-        #msg['Subject'] = "Event Driven Activity for bridge "+bid+" from "+nicedate(startTime)+" to "+nicedate(endTime)+" (InfluxDB/"+db+")"
-        msg['Subject'] = "Activity for DYH bungalow from 6am "+nicedate(startTime)
+        msg['Subject'] = "Event Driven Activity for bridge "+bid+" from "+nicedate(startTime)+" to "+nicedate(endTime)+" (InfluxDB/"+db+")"
+        #msg['Subject'] = "Activity for DYH bungalow from 6am "+nicedate(startTime)
         msg['From'] = "Bridges <bridges@continuumbridge.com>"
         recipients = to.split(',')
         [p.strip(' ') for p in recipients]
