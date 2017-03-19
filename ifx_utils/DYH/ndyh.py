@@ -625,7 +625,12 @@ def dyh (user, password, bid, to, db, daysago, doors):
 	    else: # use noise from everything else to give us the time
 		# print nicetime(pt["time"]/1000), "tick set by:", pt["name"] 
 		if latestOne:
-		    if pt["time"] - latestOne["time"] > 1000*oneMinute*61:
+		    if 1000*endTime - latestOne["time"] < 1000*oneMinute*35:
+                        bedtimeString = "   Can't find bedtime - still up at " + nicehours(latestOne["time"]/1000)
+                        #D["bedTime"] = nicehours(latestOne["time"]/1000)
+                        print "Still up at:", nicetime(latestOne["time"]/1000), "in", latestOne["name"],\
+			    "delayMins=",(pt["time"] - latestOne["time"])/1000/60 
+		    elif pt["time"] - latestOne["time"] > 1000*oneMinute*61:
                         bedtimeString = "   Went to bed at " + nicehours(latestOne["time"]/1000)
                         D["bedTime"] = nicehours(latestOne["time"]/1000)
                         print "Went to bed at:", nicetime(latestOne["time"]/1000), "from", latestOne["name"],\
@@ -687,7 +692,8 @@ def dyh (user, password, bid, to, db, daysago, doors):
 	teleString = "      No tele data\n"
 	print "no tele"
     if teleOn:
-	print "Looks like tele was on all night from:", nicetime(teleOnTime/1000)
+        teleString = teleString + "        " + nicehours(teleOnTime/1000) + " until after 6am\n"
+        print "     Tele on at", nicetime(teleOnTime/1000), "til at least 6am"
     # end of appliances
     if kettleOnTimes:
 	D["kettle"] = kettleOnTimes
@@ -883,7 +889,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
     #+ fridgeString 
     print Text 
     
-    exit()
+    #exit()
     #print "D:", json.dumps(D, indent=4)
     #f = bid + "_" + nicedate(startTime) + "_from_6am.txt"
     #try:

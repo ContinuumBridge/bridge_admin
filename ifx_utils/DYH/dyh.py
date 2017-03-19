@@ -629,7 +629,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
                         if pt1["room"] == "Bedroom":
                             bedOnes+=1
                         else:
-                            if (pt1["time"] > (startTime + 13*oneHour)*1000 and pt1["time"] < (startTime + 19*oneHour)*1000 
+                            if (pt1["time"] > (startTime + 13*oneHour)*1000 and pt1["time"] <= endTime*1000 #(startTime + 19*oneHour)*1000 
                                 and pt1["value"] == 1): #slotCount == 3: #startTime + 11*oneHour:
                                 latestOne = pt1 # finding the latest non-bedroom PIR activity
                                 #print "potential latestOne at", nicetime(pt1["time"]/1000), "in", pt1["room"]
@@ -751,7 +751,11 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
         # bedtime
         lightOn = False
         lightOffTime = 0
-        if latestOne and not inBed: # and no more activity for >30mins
+        if endTime - latestOne["time"] < 40*oneMinute*1000 and not inBed: 
+            bedtimeString = "   Cant't find bedtime - still up at " + nicehours(latestOne["time"]/1000)
+            #D["bedTime"] = nicehours(latestOne["time"]/1000)
+            print "Still up at:", nicetime(latestOne["time"]/1000), "in", latestOne["room"]
+        elif latestOne and not inBed: 
             bedtimeString = "   Went to bed at " + nicehours(latestOne["time"]/1000)
             D["bedTime"] = nicehours(latestOne["time"]/1000)
             inBed = True
@@ -931,12 +935,14 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
             for i in teleOnTimes:
                 teleString = teleString + "        " + i["ontime"] + " until " + str(i["offtime"]) + "\n"
                 print "     Tele on at", i["ontime"], "til", i["offtime"]
+	    if teleOn:
+                teleString = teleString + "        " + nicehours(teleOnTime/1000) + " until after 6am\n"
+                print "     Tele on at", nicetime(teleOnTime/1000), "til at least 6am"
+
         else:
             D["tele"] = "no tele data"
             teleString = "      No tele data\n"
             print "no tele"
-	if teleOn:
-	    print "Looks like tele was on all night from:", nicetime(teleOnTime/1000)
         if kettleOnTimes:
             D["kettle"] = kettleOnTimes
             kettleString = "      Kettle on at: "
