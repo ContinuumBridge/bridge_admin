@@ -175,7 +175,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
     wanderTimes = []
     wanderString = ""
     wanderStart = 0
-    bStr = "weeble" #"bedtime"
+    bStr = "bedtime"
     # tv
     teleOnTimes = []
     # Appliances
@@ -347,11 +347,11 @@ def dyh (user, password, bid, to, db, daysago, doors):
     # tv and appliances
     #for pt in allSeries: # main loop
 	if "tv" in pt["name"].lower() and "power" in pt["name"].lower():
-	    if pt["value"] > 10 and not teleOn:
+	    if pt["value"] > 5 and not teleOn:
 		teleOn = True
 		print "tele on at", nicehours(pt["time"]/1000), "power:", pt["value"], "on", pt["name"]
 		teleOnTime = pt["time"]
-	    elif pt["value"] < 10:
+	    elif pt["value"] < 5:
 		if teleOn:
 		    teleOnTimes.append({"ontime": nicehours(teleOnTime/1000), "offtime":nicehours(pt["time"]/1000)})
 		    print "tele off at", nicehours(pt["time"]/1000), "power:", pt["value"],\
@@ -555,9 +555,10 @@ def dyh (user, password, bid, to, db, daysago, doors):
 		print nicetime(pt["time"]/1000), "Unknown state", state, "on", pt["name"]
     # uptime
     #for pt in allSeries: # main loop
-        if "bed" not in pt["name"].lower() and "binary" in pt["name"].lower() and pt["value"] == 1:
+        if (("bed" not in pt["name"].lower() and "binary" in pt["name"].lower() and pt["value"] == 1)
+	    or ("front" not in pt["name"].lower() and "binary" in pt["name"].lower() and "door" in pt["name"].lower() and pt["value"] == 1)):
             if (pt["time"]/1000 > startTime 
-                and pt["time"]/1000 < startTime +6*oneHour 
+                and pt["time"]/1000 < startTime +9*oneHour 
                 and not gotUp):
                 if len(upFifo) <= 10:
                     if uptimeDebug:
@@ -568,9 +569,9 @@ def dyh (user, password, bid, to, db, daysago, doors):
 		    last = upFifo[-1]
 		    first = upFifo.pop(0) # zero is correct!
 		    #print "popped:", nicetime(first/1000)
-                    if uptimeDebug:
-		        for i in upFifo:
-			    print nicetime(i/1000)
+                    #if uptimeDebug:
+		    #    for i in upFifo:
+		    #	    print nicetime(i/1000)
 		    #print "len:", len(upFifo), "last:", nicetime(last/1000), "popped last:", nicetime(first/1000)
 		    #print "last-first:", nicehours(last/1000), "-", nicehours(first/1000), "=", (last-first)/1000/60, "minutes"
 		    # For the general case (any bridge), this needs to depend on a history of aggregate activity. Not just 26mins

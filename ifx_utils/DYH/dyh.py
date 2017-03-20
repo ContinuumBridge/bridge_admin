@@ -533,24 +533,24 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
         for ptx in allPIRSeries:
             if ptx["value"] == 1:
                 if (ptx["time"]/1000 > startTime 
-                    and ptx["time"]/1000 < startTime +6*oneHour 
+                    and ptx["time"]/1000 < startTime +8*oneHour # some late risers!!
                     and "bed" not in ptx["room"].lower() 
                     and not gotUp):
-                    if uptimeDebug:
-                        print nicetime(ptx["time"]/1000), "Potential uptime in", ptx["room"]
+                    #if uptimeDebug:
+                    #    print nicetime(ptx["time"]/1000), "Potential uptime in", ptx["room"]
                     gotUpTime = ptx["time"]
                     for pty in allPIRSeries:
                         if pty["value"] == 1:
                             if pty["time"] > gotUpTime and "bed" not in pty["room"].lower() and pty["time"] < gotUpTime + upWindow*1000:
                                 upCount+=1
                                 if uptimeDebug:
-                                    print nicetime(pty["time"]/1000), "Morning PIR activity in", pty["room"], "count=", upCount
+                                    print nicetime(pty["time"]/1000), "Getting up(?) activity in", pty["room"], "count=", upCount
                     for ptz in doorSeries:
                         if ptz["value"] == 1:
                             if ptz["time"] > gotUpTime and ptz["time"] < gotUpTime + upWindow*1000:
                                 doorCount+=1
                                 if uptimeDebug:
-                                    print nicetime(ptz["time"]/1000), "Morning activity door on", ptz["door"], "Dcount=", doorCount
+                                    print nicetime(ptz["time"]/1000), "Getting up(?) activity on", ptz["door"], "Dcount=", doorCount
 
                     #if upCount >= 6 or (upCount >5 and doorCount >= 2):
                     if upCount + doorCount >= 10:
@@ -560,7 +560,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
                         gotUp = True
                     else:
                         if uptimeDebug:
-                            print "not got up at", nicetime(gotUpTime/1000), upWindow/60, "PIR count = ", upCount, "door=", doorCount
+                            print "not got up at", nicetime(gotUpTime/1000), "PIR count = ", upCount, "door=", doorCount, "tot:", upCount+doorCount
                         upCount = 0
                         doorCount = 0
         if allPIRSeries and not gotUp:   
@@ -579,7 +579,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
         repCount = 0
         nightCount = 0
         bedroomWanderCount = 0
-        latestOne = {}
+        latestOne = {"time":endTime*1000}
         A1 = {}
         A = {}
         inBed = False
@@ -629,10 +629,14 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
                         if pt1["room"] == "Bedroom":
                             bedOnes+=1
                         else:
-                            if (pt1["time"] > (startTime + 13*oneHour)*1000 and pt1["time"] <= endTime*1000 #(startTime + 19*oneHour)*1000 
+                            if (pt1["time"] > (startTime + 14*oneHour)*1000 and pt1["time"] <= endTime*1000 # after 8pm
                                 and pt1["value"] == 1): #slotCount == 3: #startTime + 11*oneHour:
-                                latestOne = pt1 # finding the latest non-bedroom PIR activity
-                                #print "potential latestOne at", nicetime(pt1["time"]/1000), "in", pt1["room"]
+				# needs qualifying with an inactivity time otherwise the last wander becomes bedtime
+                                if latestOne and pt1["time"] - latestOne["time"] > 61*oneMinute*1000:
+				    print "Wander at", nicetime(pt1["time"]/1000), "in", pt1["room"]
+				else:
+				    #print "potential latestOne at", nicetime(pt1["time"]/1000), "in", pt1["room"], "diff from prev=",(pt1["time"] -latestOne["time"])/1000/60, "mins"
+                                    latestOne = pt1 # finding the latest non-bedroom PIR activity
                             if pt1["room"] == "Kitchen":
                                 K+=1
                             elif pt1["room"] == "Hall":
@@ -751,8 +755,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
         # bedtime
         lightOn = False
         lightOffTime = 0
-        if endTime - latestOne["time"] < 40*oneMinute*1000 and not inBed: 
-            bedtimeString = "   Cant't find bedtime - still up at " + nicehours(latestOne["time"]/1000)
+        if endTime - latestOne["time"]/1000 < 40*oneMinute and not inBed: 
+            bedtimeString = "   Can't find bedtime - still up at " + nicehours(latestOne["time"]/1000)
             #D["bedTime"] = nicehours(latestOne["time"]/1000)
             print "Still up at:", nicetime(latestOne["time"]/1000), "in", latestOne["room"]
         elif latestOne and not inBed: 
@@ -916,18 +920,18 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
                         #print "toaster on at", nicehours(app["time"]/1000), "power:", app["power"]
                     toasterOnTime = app["time"]
             if "tv" in app["name"].lower():
-                if app["power"] > 10 and not teleOn:
+                if app["power"] > 5 and not teleOn:
                     teleOn = True
                     print "tele on at", nicehours(app["time"]/1000), "power:", app["power"], "on", app["name"]
                     teleOnTime = app["time"]
-                elif app["power"] < 10:
+                elif app["power"] < 5:
                     if teleOn:
                         teleOnTimes.append({"ontime": nicehours(teleOnTime/1000), "offtime":nicehours(app["time"]/1000)})
+			teleOn = False
                         print "tele off at", nicehours(app["time"]/1000), "power:", app["power"],\
                             "was on for", (app["time"]-teleOnTime)/60/1000, "minutes"
                     else:
                         print "Warning: tele went off twice"
-                    teleOn = False
 
         if teleOnTimes:
             D["tele"] = teleOnTimes
