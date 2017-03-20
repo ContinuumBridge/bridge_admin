@@ -79,8 +79,9 @@ def getsensor (ss):
 @click.option('--to', nargs=1, help='The address to send the email to.')
 @click.option('--daysago', nargs=1, help='How far back to look')
 @click.option('--doors', nargs=1, help='whether to debug doors')
+@click.option('--mail', nargs=1, help='whether to send a mail')
 
-def dyh (user, password, bid, to, db, daysago, doors):
+def dyh (user, password, bid, to, db, daysago, doors, mail):
     daysAgo = int(daysago) #0 # 0 means yesterday
     startTime = start() - daysAgo*60*60*24
     endTime = startTime + oneDay
@@ -164,7 +165,7 @@ def dyh (user, password, bid, to, db, daysago, doors):
     L = {"Morning":0, "Afternoon":0, "Evening":0, "Night":0}
     bed = {"Morning":0, "Afternoon":0, "Evening":0, "Night":0}
     bath = {"Morning":0, "Afternoon":0, "Evening":0, "Night":0}
-    busyString = "\nActivity levels\n"
+    busyString = "\n\nActivity levels\n"
     A1 = {}
     #bedtime
     latestOne = {} 
@@ -901,33 +902,34 @@ def dyh (user, password, bid, to, db, daysago, doors):
 
 
     # Create message container - the correct MIME type is multipart/alternative.
-    try:
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = "Event Driven Activity for bridge "+bid+" from "+nicedate(startTime)+" to "+nicedate(endTime)+" (InfluxDB/"+db+")"
-        #msg['Subject'] = "Activity for DYH bungalow from 6am "+nicedate(startTime)
-        msg['From'] = "Bridges <bridges@continuumbridge.com>"
-        recipients = to.split(',')
-        [p.strip(' ') for p in recipients]
-        if len(recipients) == 1:
-            msg['To'] = to
-        else:
-            msg['To'] = ", ".join(recipients)
-        # Create the body of the message (a plain-text and an HTML version).
-        text = "Content only available with HTML email clients\n"
-        # Record the MIME types of both parts - text/plain and text/html.
-        part1 = MIMEText(Text, 'plain')
-        #part2 = MIMEText(htmlText, 'html')
-    
-        msg.attach(part1)
-        #msg.attach(part2)
-        mail = smtplib.SMTP('smtp.gmail.com', 587)
-        mail.ehlo()
-        mail.starttls()
-        mail.login(user, password)
-        mail.sendmail(user, recipients, msg.as_string())
-        mail.quit()
-    except Exception as ex:
-        print "sendMail problem. To:", to, "type: ", type(ex), "exception: ", str(ex.args)
+    if mail:
+	try:
+	    msg = MIMEMultipart('alternative')
+	    msg['Subject'] = "Event Driven Activity for bridge "+bid+" from "+nicedate(startTime)+" to "+nicedate(endTime)+" (InfluxDB/"+db+")"
+	    #msg['Subject'] = "Activity for DYH bungalow from 6am "+nicedate(startTime)
+	    msg['From'] = "Bridges <bridges@continuumbridge.com>"
+	    recipients = to.split(',')
+	    [p.strip(' ') for p in recipients]
+	    if len(recipients) == 1:
+		msg['To'] = to
+	    else:
+		msg['To'] = ", ".join(recipients)
+	    # Create the body of the message (a plain-text and an HTML version).
+	    text = "Content only available with HTML email clients\n"
+	    # Record the MIME types of both parts - text/plain and text/html.
+	    part1 = MIMEText(Text, 'plain')
+	    #part2 = MIMEText(htmlText, 'html')
+	
+	    msg.attach(part1)
+	    #msg.attach(part2)
+	    mail = smtplib.SMTP('smtp.gmail.com', 587)
+	    mail.ehlo()
+	    mail.starttls()
+	    mail.login(user, password)
+	    mail.sendmail(user, recipients, msg.as_string())
+	    mail.quit()
+	except Exception as ex:
+	    print "sendMail problem. To:", to, "type: ", type(ex), "exception: ", str(ex.args)
     
                   
 if __name__ == '__main__':

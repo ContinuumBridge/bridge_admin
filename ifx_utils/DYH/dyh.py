@@ -579,7 +579,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
         repCount = 0
         nightCount = 0
         bedroomWanderCount = 0
-        latestOne = {"time":endTime*1000}
+        latestOne = {"time":endTime*1000, "room":"nowhere"}
         A1 = {}
         A = {}
         inBed = False
