@@ -256,7 +256,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
 					c1 = -19
 					m2 = 54
 					c2 = -429
-					if (deltaT < 360 and # limit the look-ahead as the rise could last for hours
+					if (deltaT < 360 and deltaH > 2 and # limit the look-ahead as the rise could last for hours
 					    ((deltaH < 10 and deltaT < m1*deltaH +c1) 
 					    or (deltaH >= 10 and deltaT < m2*deltaH + c2))):
 					    print "**SHOWER_new at pj:", nicetime(prevT/1000),\
@@ -294,7 +294,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
             for x in showerTimes:
 	        showerString = showerString + str(x) 
                 if showerTimes.index(x) < len(showerTimes)-1:
-	            showerString = showerString + ", " 
+		    showerString = showerString + ", " 
        	        else:
 		    showerString = showerString + "\n"
 	else:
@@ -645,8 +645,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
                                 L+=1
                             elif pt1["room"] == "Bathroom":
                                 b+=1
-                            else:
-                                print "****************missing room:", pt1["room"]
+                            #else:
+                            #    print "****************missing room:", pt1["room"]
                 prevTime = pt1["time"]
                 prevValue = pt1["value"]
                 prevRoom = pt1["room"]

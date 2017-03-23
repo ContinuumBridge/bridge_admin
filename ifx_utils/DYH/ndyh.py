@@ -318,7 +318,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
 				c1 = -19
 				m2 = 54
 				c2 = -429
-				if (deltaT < 360 and deltaH > 1 and 
+				if (deltaT < 360 and deltaH > 2 and 
 				    ((deltaH <= 10 and deltaT <= m1*deltaH +c1) 
 				    or (deltaH > 10 and deltaT < m2*deltaH + c2))):
 				    if k["occ"]:
