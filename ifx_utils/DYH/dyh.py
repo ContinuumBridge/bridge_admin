@@ -756,7 +756,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
         lightOn = False
         lightOffTime = 0
         if endTime - latestOne["time"]/1000 < 40*oneMinute and not inBed: 
-            bedtimeString = "   Can't find bedtime - still up at " + nicehours(latestOne["time"]/1000)
+            bedtimeString = "   Can't find bedtime before 6am"
             #D["bedTime"] = nicehours(latestOne["time"]/1000)
             print "Still up at:", nicetime(latestOne["time"]/1000), "in", latestOne["room"]
         elif latestOne and not inBed: 
