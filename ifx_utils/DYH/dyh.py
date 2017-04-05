@@ -337,11 +337,18 @@ def dyh (user, password, bid, to, db, daysago, doors, mail):
                     doorCloseTime = event["time"]
                     if doorDebug:
                         print nicetime(event["time"]/1000), event["name"], " - Door closed, state=", state, "io:", INOUT, "PIR:", PIR
-                    if doorOpenTime == 0:
+
+
+		    if doorOpenTime == 0:
+			doorString2 =  doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed: Note - was the door open all night?\n"
 			if doorDebug:
-			    print nicetime(event["time"]/1000), event["name"],\
-				" - Door closed before opening! \nSo we'll pretend it didn't happen and wait for it to open"
+			    print nicetime(pt["time"]/1000), "********************** Door was open all night!?!"
 		    elif doorCloseTime - doorOpenTime > 1000*oneMinute*10:
+                    #if doorOpenTime == 0:
+	            #	if doorDebug:
+		    #	   print nicetime(event["time"]/1000), event["name"],\
+		    #		" - Door closed before opening! \nSo we'll pretend it didn't happen and wait for it to open"
+		    #elif doorCloseTime - doorOpenTime > 1000*oneMinute*10:
                         doorString2 =  doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Note - door was open for "\
                             + str((doorCloseTime - doorOpenTime)/1000/60) + " minutes from " + nicehours(doorOpenTime/1000) + "\n"
                         print nicetime(event["time"]/1000), "********************** Door was open for", \
