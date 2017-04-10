@@ -120,10 +120,11 @@ def postInfluxDB(dat, bid):
 @click.option('--to', nargs=1, help='The address to send the email to.')
 @click.option('--daysago', nargs=1, help='How far back to look')
 @click.option('--doors', nargs=1, help='whether to debug doors')
+@click.option('--shower_mail', nargs=1, help='whether to send Pete & I a shower mail')
 @click.option('--mail', nargs=1, help='whether to send a mail')
 @click.option('--writetoifx', nargs=1, help='whether to write to influx')
 
-def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
+def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writetoifx):
     daysAgo = int(daysago) #0 # 0 means yesterday
     startTime = start() - daysAgo*60*60*24
     endTime = startTime + oneDay
@@ -155,7 +156,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
     pts = r.json()
     #print json.dumps(r.json(), indent=4)
 
-    Text = "Testing event driven version\n\nSummary of " + nicedate(startTime) + " from 6am\n"
+    Text = "Summary of " + nicedate(startTime) + " from 6am\n"
     selectedSeries = []
     allSeries = []
 
@@ -211,16 +212,16 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
     L = {"Morning":0, "Afternoon":0, "Evening":0, "Night":0}
     bed = {"Morning":0, "Afternoon":0, "Evening":0, "Night":0}
     bath = {"Morning":0, "Afternoon":0, "Evening":0, "Night":0}
-    busyString = "\n\nActivity levels\n"
+    busyString = "\nActivity levels\n"
     A1 = {}
     #bedtime
     latestOne = {} 
-    bedtimeString = "   Can't find bedtime"
+    bedtimeString = "   Can't find bedtime\n"
     #wanders
     wanderWindow = 15*oneMinute
     wanderTimes = []
     wanders = []
-    wanderString = ""
+    wstr = "" 
     wanderStart = 0
     bStr = "bedtime"
     # tv
@@ -358,7 +359,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
 			else:
 			    lumaStr = lumaStr + "hall "
 		else:
-		    print nicetime(pt["time"]/1000), "lights on but we're in a wander"
+		    print "Note: ", nicehours(pt["time"]/1000), "lights on but we're in a wander"
 
     # showers
     #for pt in allSeries: # main loop
@@ -408,10 +409,11 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
 				    ((deltaH <= 10 and deltaT <= m1*deltaH +c1) 
 				    or (deltaH > 10 and deltaT < m2*deltaH + c2))):
 				    if k["occ"]:
-				        print "**nSHOWER at :", nicetime(prevT/1000),\
-					    "k_time:", nicetime(k["time"]/1000),\
-  					    "dh:", k["value"] - j["value"], \
-					    "dt:",(k["time"] - j["time"])/1000/60
+					if showerDebug:
+					    print "**nSHOWER at :", nicetime(prevT/1000),\
+						"k_time:", nicetime(k["time"]/1000),\
+						"dh:", k["value"] - j["value"], \
+						"dt:",(k["time"] - j["time"])/1000/60
 				        noMoreShowersTillItFalls = True
 				        showerTimes.append(k["time"])
 				    else:
@@ -434,11 +436,11 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
     # tv and appliances
     #for pt in allSeries: # main loop
 	if "tv" in pt["name"].lower() and "power" in pt["name"].lower():
-	    if pt["value"] > 5 and not teleOn:
+	    if pt["value"] > 7 and not teleOn:
 		teleOn = True
 		#print "tele on at", nicehours(pt["time"]/1000), "power:", pt["value"], "on", pt["name"]
 		teleOnTime = pt["time"]
-	    elif pt["value"] < 5:
+	    elif pt["value"] < 4:
 		if teleOn:
 		    teleOnTimes.append({"ontime": nicehours(teleOnTime/1000), "offtime":nicehours(pt["time"]/1000)})
 		    #print "tele off at", nicehours(pt["time"]/1000), "power:", pt["value"],\
@@ -678,7 +680,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
 			uptimeString = "   Got up at " + nicehours(gotUpTime/1000) + "\n"
 			D["gotUpTime"] = nicehours(gotUpTime/1000)
 			ifxData.append({"name": bid + "/In_bed", "points": [[gotUpTime, 3]]})
-			print "*** Got up at:", nicetime(first/1000), "dt=", (last-first)/1000/60, "minutes"
+			if uptimeDebug:
+			    print "*** Got up at:", nicetime(first/1000), "dt=", (last-first)/1000/60, "minutes"
 		    else:
                         if uptimeDebug:
 			    print "Rejecting:", nicetime(first/1000), "cause it's 10 items in", (last-first)/1000/60, "minutes (need 26mins)"
@@ -724,7 +727,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
 		# print nicetime(pt["time"]/1000), "tick set by:", pt["name"] 
 		if latestOne:
 		    if 1000*endTime - latestOne["time"] < 1000*oneMinute*35:
-                        bedtimeString = "   Can't find bedtime - still up at " + nicehours(latestOne["time"]/1000)
+                        bedtimeString = "   Can't find bedtime - still up at " + nicehours(latestOne["time"]/1000) + "\n"
                         #D["bedTime"] = nicehours(latestOne["time"]/1000)
 			if bedtimeDebug:
 			    print "Still up at:", nicetime(latestOne["time"]/1000), "in", latestOne["name"],\
@@ -732,8 +735,9 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
 		    elif pt["time"] - latestOne["time"] > 1000*oneMinute*61:
                         bedtimeString = "   Went to bed at " + nicehours(latestOne["time"]/1000)
                         D["bedTime"] = nicehours(latestOne["time"]/1000)
-                        print "Went to bed at:", nicetime(latestOne["time"]/1000), "from", latestOne["name"],\
-			    "delayMins=",(pt["time"] - latestOne["time"])/1000/60 
+			if bedtimeDebug:
+			    print "Went to bed at:", nicetime(latestOne["time"]/1000), "from", latestOne["name"],\
+				"delayMins=",(pt["time"] - latestOne["time"])/1000/60 
 			inBed = True
 			bedTime = latestOne["time"]
 			ifxData.append({"name": bid + "/In_bed", "points": [[bedTime, 1]]})
@@ -746,15 +750,21 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
 	    bStr = "bedtime"
 	    if (pt["time"] > bedTime + 1000*oneMinute
 		and "bedroom" not in pt["name"].lower()
-		and ("pir" in pt["name"].lower() or "door" in pt["name"].lower() or "movement" in pt["name"].lower())
+		#and ("pir" in pt["name"].lower() or "door" in pt["name"].lower() or "movement" in pt["name"].lower())
+		and ("pir" in pt["name"].lower() or "movement" in pt["name"].lower()) # bathroom door blows open
 		and "binary" in pt["name"].lower()
+		and "hall" not in pt["name"].lower()
 		and pt["value"] == 1):
-		wanders.append({"time":pt["time"], "room": getsensor(pt["name"])})
-		if wanderDebug:
-		    print nicetime(pt["time"]/1000), "new wander in", json.dumps(wanders, indent=4), "bedtime:", nicetime(bedTime/1000)
-		if pt["time"] > wanderStart + wanderWindow*1000:
+		if pt["time"] > wanderStart + wanderWindow*1000: # a new wander
 		    wanderStart = pt["time"]
 		    wanderTimes.append(nicehours(wanderStart/1000))
+		    wanders.append({"wanderStart": wanderStart, "wanderSensors":[pt["name"]]})
+		    if wanderDebug:
+			print nicetime(pt["time"]/1000), "new wander in", json.dumps(wanders, indent=4), "bedtime:", nicetime(bedTime/1000)
+		if pt["time"] > wanderStart and pt["time"] < wanderStart + wanderWindow*1000:
+		    # we're in a wander
+		    if pt["name"] not in wanders[-1]["wanderSensors"]:
+			wanders[-1]["wanderSensors"].append(pt["name"])
 	    #else:
 	    #    print nicetime(w["time"]/1000), "No wander in", w["name"], "bedtime:", nicetime(bedtime/1000)
 
@@ -768,7 +778,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
 	    else:
 		showerString = showerString + "\n"
     else:
-	showerString = "      No showers found\n"
+	showerString = "      No showers\n"
 
     # end of tv
     if teleOnTimes:
@@ -779,13 +789,12 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
 	    #print "     Tele on at", i["ontime"], "til", i["offtime"]
     elif not teleOn:
 	D["tele"] = "no tele data"
-	teleString = "      No tele data\n"
-	print "no tele"
+	teleString = "      No tv\n"
     if teleOn:
 	if not teleOnTimes:
 	    teleString = "      Tele on at:\n"
         teleString = teleString + "        " + nicehours(teleOnTime/1000) + " until after 6am\n"
-        print "     Tele on at", nicetime(teleOnTime/1000), "til at least 6am"
+        print "**Tele on at", nicetime(teleOnTime/1000), "til at least 6am"
 
     # end of appliances
     if kettleOnTimes:
@@ -800,7 +809,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
     else:
 	D["kettle"] = "No kettle data"
 	kettleString = "      No kettle data\n"
-	print "      no kettle data"
+	#print "      no kettle data"
     if microOnTimes:
 	D["microwave"] = microOnTimes
 	microString = "      Microwave on at: "
@@ -814,7 +823,6 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
     else:
 	D["microwave"] = "No microwave data"
 	microString = "      No microwave\n"
-	print "      no microwave"
     if washerOnTimes:
 	D["washer"] = washerOnTimes
 	washerString = "      Washer on at: "
@@ -827,7 +835,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
 	    #print "     Washer on at", i
     else:
 	D["washer"] = "no washer data"
-	washerString = "      No washer\n"
+	washerString = "      No washing\n"
 	#print "      no washer"
     if ovenOnTimes:
 	D["oven"] = ovenOnTimes
@@ -858,26 +866,29 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
 	cookerString = "      No cooker\n"
 	#print "      no cooker"
 
-    nwanderStart = 0
     # new end of wanders - WIP
     if wanders:
-        wanders.sort(key=operator.itemgetter('time'))
-	wanderString = "Wanders outside the bedroom after " + bStr + " at: "
+        #wanders.sort(key=operator.itemgetter('time'))
+	wstr = "\n      Wanders outside the bedroom after " + bStr + " at:\n"
 	for x in wanders:
 	    if wanderDebug:
-		print "end of wanders:", nicetime(x["time"]/1000), "in", x["room"], "nwanderStart=", nicetime(nwanderStart/1000)
-	    if x["time"] > nwanderStart + wanderWindow*1000:
-		nwanderStart = x["time"]
-		if wanderDebug:
-		    print "New wander at:", nicehours(x["time"]/1000), "starting in", x["room"]
-	    else:
-		if wanderDebug:
-		    print "then in", x["room"], "at", nicehours(x["time"]/1000)
+	        print "end of wanders:", nicetime(x["wanderStart"]/1000), "in", json.dumps(x["wanderSensors"], indent=4)
+	    wstr = wstr + "         " + nicehours(x["wanderStart"]/1000) + ": to the "
+	    for y in x["wanderSensors"]:
+		if len(x["wanderSensors"]) == 1:
+		    wstr = wstr + getsensor(y) + ".\n"
+		elif x["wanderSensors"].index(y) == len(x["wanderSensors"])-1:
+		    wstr = wstr + "and " + getsensor(y) + ".\n"
+		elif x["wanderSensors"].index(y) == len(x["wanderSensors"])-2:
+		    wstr = wstr + getsensor(y) + " "
+		else:
+		    wstr = wstr + getsensor(y) + ", "
 
     elif inBed:
 	D["wanders"] = "No wanders outside the bedroom after  " + bStr
-	wanderString = "No wanders outside the bedroom after " + bStr + "\n"
+	wstr = "\n   No wanders outside the bedroom after " + bStr + "\n"
 
+    """
     # end of wanders
     if wanderTimes:
 	wanderString = "Wanders outside the bedroom after " + bStr + " at: "
@@ -895,10 +906,11 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
     elif inBed:
 	D["wanders"] = "No wanders outside the bedroom after  " + bStr
 	wanderString = "No wanders outside the bedroom after " + bStr + "\n"
+    """
     #bedtimeString = bedtimeString + "\n"
     # end of bedtime
     if not inBed:
-	print "Something's wrong with bedtime"
+	print "Warning: Something's wrong with bedtime"
 
     # end of busyness
     aTotals = {}
@@ -910,7 +922,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
 	if len(A1[i])>0:
 	    ave = sum(A1[i])/len(A1[i]) 
 	    if  aTotals[i] == 0:
-		busyString = busyString + i + " activity: None" + " (" + str(aTotals[i]) + ")\n"
+		busyString = busyString + "   " + i + " activity: None" + " (" + str(aTotals[i]) + ")\n"
 	    elif aTotals[i] < ave + 1 and aTotals[i] > ave -1 :
 	       busyString = busyString + "   " + i + " activity: Average" + " (" + str(aTotals[i]) + ")\n"
 	    elif aTotals[i] <= ave:
@@ -920,9 +932,9 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
 	else:
 	    busyString = busyString + "   " + i + " activity: No average yet" + " (" + str(aTotals[i]) + ")\n"
 	    
-	print i, " activity   =", aTotals[i], "ave=", ave 
+	#print i, " activity   =", aTotals[i], "ave=", ave 
 	if  aTotals[i] == 0:
-	    print "      *** No movement: asleep or out or missing data"
+	    #print "      *** No movement: asleep or out or missing data"
 	    busyString = busyString + "     *** No movement: asleep or out or missing data\n"
 	else:
 	    bathroomPercent = 100*bath[i]/(aTotals[i])
@@ -950,28 +962,34 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
     if allSeries and not gotUp:   
         uptimeString = "   Can't find getting up time\n"
         D["gotUpTime"] = "Can't find getting up time"
-        print "not got up yet by", nicetime(pt["time"]/1000)
+        print "Note: not got up yet by", nicetime(pt["time"]/1000)
 
     # end of doors: needs to run after we've been through all the points
     if not pt:
 	print "Doors: No events - quiet day!!" 
     else:
-	print nicetime(pt["time"]/1000), "Doors: No more events - bombed out in", state, INOUT, "with", pt["value"], "on", pt["name"] 
+	if doorDebug:
+	    print nicetime(pt["time"]/1000), "Doors: No more events - bombed out in", state, INOUT, "with", pt["value"], "on", pt["name"] 
 	if state == "WFPIR" and INOUT == "maybe":
-	    print nicetime(pt["time"]/1000), "So: Came in at", nicetime(doorCloseTime/1000), "but didn't stay and not back before 6am" 
+	    if doorDebug:
+		print nicetime(pt["time"]/1000), "So: Came in at", nicetime(doorCloseTime/1000), "but didn't stay and not back before 6am" 
 	    doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, came but didn't stay and not back before 6am\n"
 	    doorList.append({nicehours(doorCloseTime/1000):"Door closed, came but didn't stay and not back before 6am"})
 	elif state == "WFPIR" and INOUT == "in":
-	    print nicetime(pt["time"]/1000), "So: Went out at", nicetime(doorCloseTime/1000), "and not back before 6am"
+	    if doorDebug:
+		print nicetime(pt["time"]/1000), "So: Went out at", nicetime(doorCloseTime/1000), "and not back before 6am"
 	    doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, went out - not back before 6am\n"
 	    doorList.append({nicehours(doorCloseTime/1000):"Door closed, , went out - not back before 6am"})
 
 	elif INOUT == "out" and (state == "WFDTO" or state == "WFPIR"):
-	    print nicetime(pt["time"]/1000), "and stayed out"
+	    if doorDebug:
+		print nicetime(pt["time"]/1000), "and stayed out"
 	elif state == "WFDTO" and INOUT == "in":
-	    print nicetime(pt["time"]/1000), "and stayed in"
+	    if doorDebug:
+		print nicetime(pt["time"]/1000), "and stayed in"
 	else:
-	    print nicetime(pt["time"]/1000), "Doors: Bombed out in", state, "whilst IO=", INOUT 
+	    if doorDebug:
+		print nicetime(pt["time"]/1000), "Doors: Bombed out in", state, "whilst IO=", INOUT 
 
     D["Front Door"] = doorList
 
@@ -981,9 +999,9 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
 	print "Gone to bed with", lumaStr, "lights on?"
 	lumaWarning = True
 
-    Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + showerString + bedtimeString + busyString + wanderString + doorString2 + "\n"
+    Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + showerString + bedtimeString + wstr + busyString + doorString2 + "\n"
     #+ fridgeString 
-    print Text 
+    print "\n", Text 
     
     #exit()
     #print "D:", json.dumps(D, indent=4)
@@ -994,21 +1012,21 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
     #except:
     #    print "Failed to write file"
 
-    try:
-	dat = ifxData #body["d"]
-	for d in dat:
-	    d["columns"] = ["time", "value"]
-	    if "name_in_database" in config["bridges"][bid]:
-		s = d["name"].split("/")
-		d["name"] = config["bridges"][bid]["name_in_database"]
-		for ss in s[1:]:
-		    d["name"] += "/" + ss
-	dd = dat
-	if writetoifx:
+    if writetoifx:
+	try:
+	    dat = ifxData #body["d"]
+	    for d in dat:
+		d["columns"] = ["time", "value"]
+		if "name_in_database" in config["bridges"][bid]:
+		    s = d["name"].split("/")
+		    d["name"] = config["bridges"][bid]["name_in_database"]
+		    for ss in s[1:]:
+			d["name"] += "/" + ss
+	    dd = dat
 	    print "Posting to postInfluxDB:", json.dumps(dd, indent=4)
 	    postInfluxDB(dd, bid)
-    except Exception as ex:
-	print "warning - Problem processing data to be posted, exception:", str(type(ex)), str(ex.args)
+	except Exception as ex:
+	    print "warning - Problem processing data to be posted, exception:", str(type(ex)), str(ex.args)
 
     """
     2017-04-05 12:41:38,611 DEBUG Posting to InfluxDB: [
@@ -1032,8 +1050,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
     if mail:
 	try:
 	    msg = MIMEMultipart('alternative')
-	    msg['Subject'] = "Event Driven Activity for bridge "+bid+" from "+nicedate(startTime)+" to "+nicedate(endTime)+" (InfluxDB/"+db+")"
-	    #msg['Subject'] = "Event Driven Activity for DYH bungalow from 6am "+nicedate(startTime)
+	    msg['Subject'] = "Activity for bungalow from 6am "+nicedate(startTime)
+	    #msg['Subject'] = "Event Driven Activity for bridge "+bid+" from "+nicedate(startTime)+" to "+nicedate(endTime)+" (InfluxDB/"+db+")"
 	    msg['From'] = "Bridges <bridges@continuumbridge.com>"
 	    recipients = to.split(',')
 	    [p.strip(' ') for p in recipients]
@@ -1045,6 +1063,36 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, writetoifx):
 	    text = "Content only available with HTML email clients\n"
 	    # Record the MIME types of both parts - text/plain and text/html.
 	    part1 = MIMEText(Text, 'plain')
+	    #part2 = MIMEText(htmlText, 'html')
+	
+	    msg.attach(part1)
+	    #msg.attach(part2)
+	    mail = smtplib.SMTP('smtp.gmail.com', 587)
+	    mail.ehlo()
+	    mail.starttls()
+	    mail.login(user, password)
+	    mail.sendmail(user, recipients, msg.as_string())
+	    mail.quit()
+	except Exception as ex:
+	    print "sendMail problem. To:", to, "type: ", type(ex), "exception: ", str(ex.args)
+    if shower_mail:
+	try:
+	    e_txt = "Now running as part of dyh so start = 6am\nAnd unfortunately a mail each\n\n"
+	    showerString = e_txt + bid + ":" + showerString
+	    msg = MIMEMultipart('alternative')
+	    msg['Subject'] = bid + ": Showers in 24hrs since 6am "+nicedate(startTime-oneDay)
+	    msg['From'] = "Bridges <bridges@continuumbridge.com>"
+	    recipients = "martin.sotheran@continuumbridge.com" #to.split(',')
+	    #[p.strip(' ') for p in recipients]
+	    #if len(recipients) == 1:
+	    #	msg['To'] = to
+	    #else:
+	    #	msg['To'] = ", ".join(recipients)
+	    msg['To'] = 'martin.sotheran@continuumbridge.com'
+	    # Create the body of the message (a plain-text and an HTML version).
+	    text = "Content only available with HTML email clients\n"
+	    # Record the MIME types of both parts - text/plain and text/html.
+	    part1 = MIMEText(showerString, 'plain')
 	    #part2 = MIMEText(htmlText, 'html')
 	
 	    msg.attach(part1)
