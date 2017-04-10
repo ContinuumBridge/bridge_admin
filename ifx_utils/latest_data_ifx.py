@@ -58,7 +58,7 @@ def latest_data (bid, db):
         print "Use ./latest_data.py"
         print "Unless you want a summary of all bridges"
         print "In which case make bid empty"
-        exit()
+        #exit()
         q = "select * from /" + bid + "/ limit 1"
         query = urllib.urlencode ({'q':q})
 
