@@ -715,7 +715,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 
     # bedtime
     #for pt in allSeries: # main loop
-        if pt["time"] > (startTime + 14*oneHour)*1000 and pt["time"] < 1000*endTime and not inBed:
+        if pt["time"] > (startTime + 14*oneHour+30*oneMinute)*1000 and pt["time"] < 1000*endTime and not inBed:
             if (("pir" in pt["name"].lower() or "movement" in pt["name"].lower())
 	        and "binary" in pt["name"].lower()
 	        and "bedroom" not in pt["name"].lower()
