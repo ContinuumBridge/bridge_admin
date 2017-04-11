@@ -276,7 +276,11 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     lumaWarned = False
     lumaWarning = False
     lumaStr = ""
+    # random bits'n'pieces
     ifxData = []
+    dupCount = 0
+    sensorsFound = {}
+    missingRooms = []
 
     f = bid + "n_activity"
     try:
@@ -295,27 +299,33 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
         #print nicetime(pt["time"]/1000), "next event is", pt["value"], "on", pt["name"]
         if pt == prevpt:
             #print nicetime(pt["time"]/1000), "*** Ignoring duplicate event", pt["value"], "on", pt["name"]
+	    dupCount+=1
             continue
         prevpt = pt
+
 
 	if "in_bed" in pt["name"].lower():
 	    print "***** ", nicetime(pt["time"]/1000), "found inBed =", pt["value"]
 
     # WIP
     # collect rooms so that ultimately this can be independent of dyh
-    # A bridge app would need to know which is the bedroom.
+    # A bridge app would need to know which is the bedroom and the outside door.
     # It'll infer which is the bathroom by finding humidity
-	if "humidity" in pt["name"].lower() or ("pir" in pt["name"].lower() or "movement" in pt["name"].lower()) and "binary" in pt["name"].lower():
-	    if getsensor(pt["name"]) not in rooms:
-		#print "rooms appending", pt["name"]
-		rooms.append(getsensor(pt["name"]))
-		#print "rooms", json.dumps(rooms, indent=4)
-	elif "binary" in pt["name"].lower(): # it's probably a door - currently adds Pete's shower!
-	    if getsensor(pt["name"]) not in doors:
-		#print "doors appending", pt["name"]
-		doors.append(getsensor(pt["name"]))
-		#print "doors", json.dumps(doors, indent=4)
-	    
+	if ("binary" in pt["name"].lower() or 
+	    "humidity" in pt["name"].lower() or
+	    "power" in pt["name"].lower() or
+	    "temperature" in pt["name"].lower() or
+	    "luminance" in pt["name"].lower()):
+	    foo = pt["name"].split('/')
+	    place = foo[1]
+	    char = foo[2]
+	    if place not in sensorsFound: 
+		sensorsFound[place] = [char]
+	        #print "new place: sensorFound:", json.dumps(sensorsFound, indent=4)
+	    if char not in sensorsFound[place]:
+		sensorsFound[place].append(char)
+	        #print "New char: sensorFound:", json.dumps(sensorsFound, indent=4)
+
 
     # lights
         if "lum" in pt["name"].lower():
@@ -723,7 +733,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 		L[slot]+=1
 	    elif "bathroom" in pt["name"].lower():
 		bath[slot]+=1
-	    else:
+	    elif pt["name"] not in missingRooms:
+		missingRooms.append(pt["name"])
 	        print "****************missing room:", pt["name"]
 
     # bedtime
@@ -762,6 +773,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
         if inBed:
 	    bStr = "bedtime"
 	    if (pt["time"] > bedTime + 1000*oneMinute
+		and "outside" not in pt["name"].lower()
 		and "bedroom" not in pt["name"].lower()
 		#and ("pir" in pt["name"].lower() or "door" in pt["name"].lower() or "movement" in pt["name"].lower())
 		and ("pir" in pt["name"].lower() or "movement" in pt["name"].lower()) # bathroom door blows open
@@ -1015,6 +1027,9 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	print "Gone to bed with", lumaStr, "lights on?"
 	lumaWarning = True
 
+    print "*** ignored", dupCount, "duplicate points"
+    print "*** sensorsFound:", json.dumps(sensorsFound, indent=4)
+
     #Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + showerString + bedtimeString + wstr + busyString + doorString2 + "\n" # removed cooker 'till fixed
     Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + showerString + bedtimeString + wstr + busyString + doorString2 + "\n"
 
@@ -1091,22 +1106,23 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	    mail.login(user, password)
 	    mail.sendmail(user, recipients, msg.as_string())
 	    mail.quit()
+	    print "Summary mail sent to:", to
 	except Exception as ex:
 	    print "sendMail problem. To:", to, "type: ", type(ex), "exception: ", str(ex.args)
     if shower_mail:
 	try:
+	    to = "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com"
 	    e_txt = "Now running as part of dyh so start = 6am\nAnd unfortunately it's a mail for each bridge\n\n"
 	    showerString = e_txt + bid + ":" + showerString
 	    msg = MIMEMultipart('alternative')
 	    msg['Subject'] = bid + ": Showers in 24hrs since 6am "+nicedate(startTime-oneDay)
 	    msg['From'] = "Bridges <bridges@continuumbridge.com>"
-	    recipients = "martin.sotheran@continuumbridge.com" #to.split(',')
-	    #[p.strip(' ') for p in recipients]
-	    #if len(recipients) == 1:
-	    #	msg['To'] = to
-	    #else:
-	    #	msg['To'] = ", ".join(recipients)
-	    msg['To'] = 'martin.sotheran@continuumbridge.com'
+	    recipients = to.split(',')
+	    [p.strip(' ') for p in recipients]
+	    if len(recipients) == 1:
+	    	msg['To'] = to
+	    else:
+	    	msg['To'] = ", ".join(recipients)
 	    # Create the body of the message (a plain-text and an HTML version).
 	    text = "Content only available with HTML email clients\n"
 	    # Record the MIME types of both parts - text/plain and text/html.
@@ -1121,6 +1137,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	    mail.login(user, password)
 	    mail.sendmail(user, recipients, msg.as_string())
 	    mail.quit()
+	    print "Shower mail sent to:", to
 	except Exception as ex:
 	    print "sendMail problem. To:", to, "type: ", type(ex), "exception: ", str(ex.args)
     
