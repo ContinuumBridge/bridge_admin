@@ -203,7 +203,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     doorList = []
     prevBedroomOccTime = 0
     # uptime
-    uptimeString = ""
+    uptimeString = "   Can't find getting up time\n"
     upFifo = []
     # busyness
     K = {"Morning":0, "Afternoon":0, "Evening":0, "Night":0}
@@ -672,8 +672,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
                 and pt["time"]/1000 < startTime +9*oneHour 
                 and not gotUp):
                 if len(upFifo) <= 10:
-                    #if uptimeDebug:
-                    #    print nicetime(pt["time"]/1000), "Appending morning activity on", pt["name"]
+                    if uptimeDebug:
+                        print nicetime(pt["time"]/1000), "Appending morning activity on", pt["name"]
                     gotUpTime = pt["time"]
                     upFifo.append(gotUpTime)
                 else:
@@ -698,13 +698,13 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 				    ifxData.append({"name": bid + "/In_bed", "points": [[gotUpTime, 3]]})
 				    if uptimeDebug:
 					print "*** Got up for shower at:", nicetime(sh/1000)
-				else:    
-				    gotUpTime = first
-				    uptimeString = "   Got up at " + nicehours(gotUpTime/1000) + "\n"
-				    D["gotUpTime"] = nicehours(gotUpTime/1000)
-				    ifxData.append({"name": bid + "/In_bed", "points": [[gotUpTime, 3]]})
-				    if uptimeDebug:
-					print "*** Got up at:", nicetime(first/1000), "dt=", (last-first)/1000/60, "minutes"
+			else:    
+			    gotUpTime = first
+			    uptimeString = "   Got up at " + nicehours(gotUpTime/1000) + "\n"
+			    D["gotUpTime"] = nicehours(gotUpTime/1000)
+			    ifxData.append({"name": bid + "/In_bed", "points": [[gotUpTime, 3]]})
+			    if uptimeDebug:
+				print "*** Got up at:", nicetime(first/1000), "dt=", (last-first)/1000/60, "minutes"
 		    else:
                         if uptimeDebug:
 			    print "Rejecting:", nicetime(first/1000), "cause it's 10 items in", (last-first)/1000/60, "minutes (need 26mins)"
