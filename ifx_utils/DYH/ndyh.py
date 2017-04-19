@@ -472,10 +472,10 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 		cookerOnTime = pt["time"]
 	    prevCookerPower = pt["value"]
 	if "washer" in pt["name"].lower() and "power" in pt["name"].lower()and "power" :
-	    if pt["value"] > 200:
+	    if pt["value"] > 70:
 		if pt["time"] > washerOnTime + 15*oneMinute*1000:
 		    washerOnTimes.append(nicehours(pt["time"]/1000))
-		    #print "washer on at", nicehours(pt["time"]/1000), "power:", pt["value"]
+		    print "washer on at", nicehours(pt["time"]/1000), "power:", pt["value"]
 		washerOnTime = pt["time"]
 	if "microwave" in pt["name"].lower()and "power" in pt["name"].lower():
 	    if pt["value"] > 1000:
