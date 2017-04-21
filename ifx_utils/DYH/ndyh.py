@@ -444,17 +444,17 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     # tv and appliances
     #for pt in allSeries: # main loop
 	if "tv" in pt["name"].lower() and "power" in pt["name"].lower():
-	    if pt["value"] > 7 and not teleOn:
+	    if pt["value"] > 15 and not teleOn:
 		teleOn = True
-		#print "tele on at", nicehours(pt["time"]/1000), "power:", pt["value"], "on", pt["name"]
+		print nicetime(pt["time"]/1000), "tele on,  power:", pt["value"]
 		teleOnTime = pt["time"]
-	    elif pt["value"] < 4:
+	    elif pt["value"] < 10:
 		if teleOn:
-		    teleOnTimes.append({"ontime": nicehours(teleOnTime/1000), "offtime":nicehours(pt["time"]/1000)})
-		    #print "tele off at", nicehours(pt["time"]/1000), "power:", pt["value"],\
-		    #	"was on for", (pt["time"]-teleOnTime)/60/1000, "minutes"
-		else:
-		    print "*** Warning: tele went off twice at", nicetime(pt["time"]/1000) 
+		    teleOnTimes.append({"ontime":nicehours(teleOnTime/1000), "offtime":nicehours(pt["time"]/1000), "onFor":(pt["time"] - teleOnTime)/1000/60})
+		    print nicetime(pt["time"]/1000), "tele off, power:", pt["value"],\
+		    	"was on for", (pt["time"]-teleOnTime)/60/1000, "minutes"
+		#else:
+		#    print "*** Warning: tele went off twice at", nicetime(pt["time"]/1000) 
 		teleOn = False
 	if "oven" in pt["name"].lower() and "power" in pt["name"].lower():
 	    if pt["value"] > 300:
@@ -811,16 +811,16 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     # end of tv
     if teleOnTimes:
 	D["tele"] = teleOnTimes
-	teleString = "      Tele on at:\n"
+	teleString = "      TV on at:\n"
 	for i in teleOnTimes:
-	    teleString = teleString + "        " + i["ontime"] + " until " + str(i["offtime"]) + "\n"
+	    teleString = teleString + "        " + i["ontime"] + " until " + str(i["offtime"]) + " (" + str(i["onFor"]) + " mins)\n"
 	    #print "     Tele on at", i["ontime"], "til", i["offtime"]
     elif not teleOn:
 	D["tele"] = "no tele data"
 	teleString = "      No tv\n"
     if teleOn:
 	if not teleOnTimes:
-	    teleString = "      Tele on at:\n"
+	    teleString = "      TV on at:\n"
         teleString = teleString + "        " + nicehours(teleOnTime/1000) + " until after 6am\n"
         print "**Tele on at", nicetime(teleOnTime/1000), "til at least 6am"
 
