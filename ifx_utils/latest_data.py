@@ -41,9 +41,9 @@ dburl = "http://onepointtwentyone-horsebrokedown-1.c.influxdb.com:8086/"
 
 def batteries (bid, db):
     if not bid:
-        print "No BID specified - can't continue"
-        exit()
-        #query = urllib.urlencode ({'q':'select * from /BID*/ limit 1'})
+        print "No BID specified - checking all in", db
+        #exit()
+        query = urllib.urlencode ({'q':'select * from /.*/ limit 1'})
     else:
         q = "select * from /" + bid + "/ limit 1"
         query = urllib.urlencode ({'q':q})
@@ -60,8 +60,8 @@ def batteries (bid, db):
         r = requests.get(url) # ,params=list+series)
         latestPoints = r.json()
     except:
-        print "****No data found in the", db, "database. Probably", bid, "isn't in there****"
-        return #exit()
+        print "****No data found in the", db, "database. Probably no match for \"", bid, "\""
+        exit()
     #print json.dumps(r.json(), indent=4)
     #print json.dumps(latestPoints, indent=4)    
     #print json.dumps(r.content, indent=4)
