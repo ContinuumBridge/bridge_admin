@@ -463,7 +463,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 		    #print "oven on at", nicehours(pt["time"]/1000), "power:", pt["value"], "on", pt["name"]
 		ovenOnTime = pt["time"]
 	if "cooker" in pt["name"].lower() and "power" in pt["name"].lower()and "power" :
-	    if pt["value"] == prevCookerPower:
+	    if pt["value"] == prevCookerPower or (pt["value"] == 1276.12 and pt["time"] < 1000*(startTime + 4*oneHour)):
 		print "*** Cooker point", nicehours(pt["time"]/1000), "cooker point ignored. Power:", pt["value"]
 	    elif pt["value"] > 300:
 		if pt["time"] > cookerOnTime + 10*oneMinute*1000:
@@ -1030,11 +1030,9 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     print "*** ignored", dupCount, "duplicate points"
     print "*** sensorsFound:", json.dumps(sensorsFound, indent=4)
 
-    #Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + showerString + bedtimeString + wstr + busyString + doorString2 + "\n" # removed cooker 'till fixed
-    Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + showerString + bedtimeString + wstr + busyString + doorString2 + "\n"
+    Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + showerString + bedtimeString + wstr + busyString + doorString2 + "\n"
 
-    nText = Text + "Missing is:\n" + cookerString
-    print "\n", nText 
+    print "\n", Text 
     
     #exit()
     #print "D:", json.dumps(D, indent=4)
