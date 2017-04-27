@@ -81,7 +81,8 @@ def epochtime(date_time):
 def start():
     t = time.localtime(time.time() - oneDay)
     yesterday = time.strftime('%Y-%m-%d', t)
-    s = yesterday + " 06:00:00"
+    #s = yesterday + " 06:00:00"
+    s = yesterday + " 05:30:00"
     return epochtime(s)
 
 def getwander (ss):
@@ -128,7 +129,6 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     daysAgo = int(daysago) #0 # 0 means yesterday
     startTime = start() - daysAgo*60*60*24
     endTime = startTime + oneDay
-    midnight = startTime + 18*oneHour
     #indeces
     i_time = 0
     i_data = 2
@@ -169,7 +169,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     #print "IOpts:", json.dumps(IOpts, indent=4)
 
 
-    Text = "Summary of " + nicedate(startTime) + " from 6am\n"
+    Text = "Summary of " + nicedate(startTime) + " from " + nicehours(startTime) + "am\n"
     selectedSeries = []
     allSeries = []
 
@@ -178,7 +178,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     doorDebug = False
     if doors:
         doorDebug = True
-    uptimeDebug = False
+    uptimeDebug = True
     showerDebug = False
     wanderDebug = True
     teleOn = False
@@ -625,8 +625,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 		    state = "WFDTO"
 		    if INOUT == "in":
 			if PIR and pt["time"] > doorCloseTime + 20*1000:#  and pt["time"] - doorCloseTime < 1000*30*oneMinute:
-			    if visitor == True:
-				if abs(checkInTime-doorCloseTime) < 5*oneMinute*1000:
+			    if visitor == True: # what if PIR happens before checkin/out??? 2017-04-27 15:29:22
+				if abs(checkInTime-doorCloseTime) < 8*oneMinute*1000:
 				    if doorDebug:
 					print nicetime(pt["time"]/1000), "** didn't leave - visitor checked in", nicetime(doorCloseTime/1000),\
 					    "waited ", (pt["time"] - doorCloseTime)/1000/60, "minutes for pir\n"
@@ -743,11 +743,14 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 		    #print "last-first:", nicehours(last/1000), "-", nicehours(first/1000), "=", (last-first)/1000/60, "minutes"
 		    # For the general case (any bridge), this needs to depend on a history of aggregate activity. Not just 26mins
 		    if (last-first) <= 1000*oneMinute*26:
+			if uptimeDebug:
+			    print "Got up at", nicetime(gotUpTime/1000)
 			gotUp = True
 			if showerTimes:
 			    for sh in showerTimes:
-				print "Got up at", nicetime(gotUpTime/1000), "but showers = ", nicetime(sh/1000)
-				if sh < first:
+				if uptimeDebug:
+				    print "Got up at", nicetime(gotUpTime/1000), "but showers = ", nicetime(sh/1000), "and first=", nicetime(first/1000)
+				if sh < gotUpTime: #first:
 				    gotUpTime = sh
 				    uptimeString = "   Got up at " + nicehours(gotUpTime/1000) + " for a shower\n"
 				    D["gotUpTime"] = nicehours(gotUpTime/1000)
@@ -1075,8 +1078,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	if state == "WFPIR" and INOUT == "maybe":
 	    if doorDebug:
 		print nicetime(pt["time"]/1000), "So: Came in at", nicetime(doorCloseTime/1000), "but didn't stay and not back before 6am" 
-	    doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, came but didn't stay and not back before 6am\n"
-	    doorList.append({nicehours(doorCloseTime/1000):"Door closed, came but didn't stay and not back before 6am"})
+	    doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, came in but didn't stay and not back before 6am\n"
+	    doorList.append({nicehours(doorCloseTime/1000):"Door closed, came in but didn't stay and not back before 6am"})
 	elif state == "WFPIR" and INOUT == "in":
 	    if doorDebug:
 		print nicetime(pt["time"]/1000), "So: Went out at", nicetime(doorCloseTime/1000), "and not back before 6am"
