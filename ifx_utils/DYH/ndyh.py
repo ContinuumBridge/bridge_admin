@@ -576,20 +576,25 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 		    if doorDebug:
 		        print nicetime(pt["time"]/1000), "********************** Door was open for", \
 			    (doorCloseTime - doorOpenTime)/1000/60, "minutes. closeTime=", nicetime(doorCloseTime/1000)
-	    elif ((("pir" in pt["name"].lower() or "movement" in pt["name"].lower()) 
-		and "binary" in pt["name"].lower() 
-		and "outside" not in pt["name"].lower() 
-		and pt["value"] == 1)
-		or "door" in pt["name"].lower()):
+	    elif (
+		    (
+			("pir" in pt["name"].lower() or "movement" in pt["name"].lower()) 
+			and "binary" in pt["name"].lower() 
+			and "outside" not in pt["name"].lower()
+		    )
+		or ("door" in pt["name"].lower() and "front" not in pt["name"].lower())
+		and pt["value"] == 1):
+		if doorDebug and PIR == False:
+		    print nicetime(pt["time"]/1000), "PIR set by:", pt["name"]
 		PIR = True # PIR or non-front doors
-		#if doorDebug:
-		#    print nicetime(pt["time"]/1000), "PIR set by:", pt["name"]
             #else:
             #	print nicetime(pt["time"]/1000), "mystery point on:", pt["name"]
 	    prevState = state
 
 	    if state == "WFDTO_U":
 		if PIR:
+		    if doorDebug:
+			print state, nicetime(pt["time"]/1000), "Setting INOUT to in"
 		    INOUT = "in"
 		    state = "WFDTO"
 		elif doorOpened:
