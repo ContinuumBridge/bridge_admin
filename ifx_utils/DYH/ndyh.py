@@ -178,9 +178,9 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     doorDebug = False
     if doors:
         doorDebug = True
-    uptimeDebug = True
+    uptimeDebug = False
     showerDebug = False
-    wanderDebug = True
+    wanderDebug = False
     teleOn = False
     INOUT = "fubar"
     gotUpTime = 0
@@ -838,7 +838,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	    bStr = "bedtime"
 	    if (pt["time"] > bedTime + 1000*oneMinute
 		and "outside" not in pt["name"].lower()
-		and "bedroom" not in pt["name"].lower()
+		#and "bedroom" not in pt["name"].lower()
 		#and ("pir" in pt["name"].lower() or "door" in pt["name"].lower() or "movement" in pt["name"].lower())
 		and ("pir" in pt["name"].lower() or "movement" in pt["name"].lower()) # bathroom door blows open
 		and "binary" in pt["name"].lower()
@@ -854,20 +854,6 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 		    # we're in a wander
 		    if pt["name"] not in wanders[-1]["wanderSensors"]:
 			wanders[-1]["wanderSensors"].append(pt["name"])
-	    """ failed cos it's always the precurser to a non-bedroom wanders
-	    elif (pt["time"] > wanderStart + wanderWindow*1000 # we're not in a wander
-		and pt["time"] > bedTime + 1000*oneMinute*30
-		and "bedroom" in pt["name"].lower()
-		and ("pir" in pt["name"].lower() or "movement" in pt["name"].lower())
-		and "binary" in pt["name"].lower()
-		and pt["value"] == 1):
-		if pt["time"] > b_wanderStart + wanderWindow*1000: # a new wander
-		    b_wanderStart = pt["time"]
-		    b_wanderTimes.append(nicehours(b_wanderStart/1000))
-		    b_wanders.append({"wanderStart": b_wanderStart, "wanderSensors":[pt["name"]]})
-		    if wanderDebug:
-			print nicetime(pt["time"]/1000), "new wander in the bedroom, bedtime:", nicetime(bedTime/1000)
-	    """
 
     # end of showers
     if showerTimes:
@@ -970,7 +956,52 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	cookerString = "      No cooker\n"
 	#print "      no cooker"
 
-    # new end of wanders - WIP
+    # end of wanders - WIP
+    if wanders:
+	if wanderDebug:
+	    print "EOW before:", json.dumps(wanders,indent=4)
+	for x in list(wanders):
+	    if wanderDebug:
+		print "processing:", json.dumps(x,indent=4)
+	    if len(x["wanderSensors"]) == 1 and "bedroom" in x["wanderSensors"][0].lower():
+		if wanderDebug:
+		    print "bedroom only wander at:", nicetime(x["wanderStart"]/1000)
+		b_wanders.append(x)
+		wanders.remove(x)
+	    else:
+		for j in list(wanders[wanders.index(x)]["wanderSensors"]):
+		    if "bedroom" in j.lower():
+			wanders[wanders.index(x)]["wanderSensors"].remove(j)
+			if wanderDebug:
+			    print "deleted bedroom from:", wanders[wanders.index(x)]["wanderSensors"]
+
+	if wanderDebug:
+	    print "EOW after:", json.dumps(wanders,indent=4)
+	wstr = "\n      Wanders outside the bedroom after " + bStr + " at:\n"
+	for x in wanders:
+	    if wanderDebug:
+	        print "end of wanders:", nicetime(x["wanderStart"]/1000), "in", json.dumps(x["wanderSensors"], indent=4)
+	    wstr = wstr + "         " + nicehours(x["wanderStart"]/1000) + ": to the "
+	    for y in x["wanderSensors"]:
+		if len(x["wanderSensors"]) == 1:
+		    wstr = wstr + getsensor(y) + ".\n"
+		elif x["wanderSensors"].index(y) == len(x["wanderSensors"])-1:
+		    wstr = wstr + "and " + getsensor(y) + ".\n"
+		elif x["wanderSensors"].index(y) == len(x["wanderSensors"])-2:
+		    wstr = wstr + getsensor(y) + " "
+		else:
+		    wstr = wstr + getsensor(y) + ", "
+    elif inBed:
+	D["wanders"] = "No wanders outside the bedroom after  " + bStr
+	wstr = "\n   No wanders outside the bedroom after " + bStr + "\n"
+    if b_wanders:
+	b_wstr = "      Wanders in the bedroom after " + bStr + " at:\n"
+	for x in b_wanders:
+	    if wanderDebug:
+	        print "end of bedroom wanders:", nicetime(x["wanderStart"]/1000)
+	    b_wstr = b_wstr + "         " + nicehours(x["wanderStart"]/1000) + "\n"
+    wstr = wstr + b_wstr
+    """
     if wanders:
         #wanders.sort(key=operator.itemgetter('time'))
 	wstr = "\n      Wanders outside the bedroom after " + bStr + " at:\n"
@@ -997,26 +1028,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	        print "end of bedroom wanders:", nicetime(x["wanderStart"]/1000)
 	    b_wstr = b_wstr + "         " + nicehours(x["wanderStart"]/1000) + "\n"
     wstr = wstr + b_wstr
+    """
 
-    """
-    # end of wanders
-    if wanderTimes:
-	wanderString = "Wanders outside the bedroom after " + bStr + " at: "
-	for x in wanderTimes:
-	    #print "wanderTimes:", x
-	    if len(wanderTimes) == 1:
-		wanderString = wanderString + str(x) + ".\n"
-	    elif wanderTimes.index(x) == len(wanderTimes)-1:
-		wanderString = wanderString + "and " + str(x) + ".\n"
-	    elif wanderTimes.index(x) == len(wanderTimes)-2:
-		wanderString = wanderString + str(x) + " "
-	    else:
-		wanderString = wanderString + str(x) + ", "
-	D["wanders"] = wanderTimes
-    elif inBed:
-	D["wanders"] = "No wanders outside the bedroom after  " + bStr
-	wanderString = "No wanders outside the bedroom after " + bStr + "\n"
-    """
     #bedtimeString = bedtimeString + "\n"
     # end of bedtime
     if not inBed:
