@@ -1104,7 +1104,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	    if doorDebug:
 		print nicetime(pt["time"]/1000), "So: Went out at", nicetime(doorCloseTime/1000), "and not back before 6am"
 	    doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, went out - not back before 6am\n"
-	    doorList.append({"time":doorCloseTime, "text":": Door closed, , went out - not back before 6am"})
+	    doorList.append({"time":doorCloseTime, "text":": Door closed, went out - not back before 6am"})
 
 	elif INOUT == "out" and (state == "WFDTO" or state == "WFPIR"):
 	    if doorDebug:
