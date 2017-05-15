@@ -16,6 +16,7 @@ import os, sys
 import re
 import smtplib
 import operator
+#import difflib
 from itertools import cycle
 import urllib
 from email.mime.multipart import MIMEMultipart
@@ -56,6 +57,13 @@ config = {
 	}
     }
 }
+"""
+def unidiff_output(expected, actual):
+    expected=expected.splitlines(1)
+    actual=actual.splitlines(1)
+    diff=difflib.unified_diff(expected, actual)
+    return ''.join(diff)
+"""
 
 def nicetime(timeStamp):
     localtime = time.localtime(timeStamp)
@@ -217,6 +225,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     doorOpenTime = 0
     doorCloseTime = 0
     doorString2 = "\nFront Door\n"
+    doorString3 = "\nFront Door\n"
     pirCount = 0
     doorList = []
     prevBedroomOccTime = 0
@@ -534,18 +543,28 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 
     # Front door
     #for pt in allSeries: # main loop
-        if "checked_in" in pt["name"].lower():
+	if "checked_in" in pt["name"].lower():
+	    checkInTime = pt["time"]
 	    print nicetime(pt["time"]/1000), "visitor checked in"
 	    if visitor == True:
 		print nicetime(pt["time"]/1000), "*** WARNING double check in"
+		doorList.append({"time":checkInTime, "text":":                      visitor checked in (again)"})
+		doorString2 = doorString2 + "   " + nicehours(checkInTime/1000) + ":                      visitor checked in (again)\n"
+	    else:
+		doorList.append({"time":checkInTime, "text":":                      visitor checked in"})
+		doorString2 = doorString2 + "   " + nicehours(checkInTime/1000) + ":                      visitor checked in\n"
 	    visitor = True
-	    checkInTime = pt["time"]
         elif "checked_out" in pt["name"].lower():
 	    print nicetime(pt["time"]/1000), "visitor checked out"
-	    if visitor == False:
-		print nicetime(pt["time"]/1000), "*** WARNING double check out"
-	    visitor = False
 	    checkOutTime = pt["time"]
+	    if visitor == False:
+		doorList.append({"time":checkOutTime, "text":":                      visitor checked out (again)"})
+		doorString2 = doorString2 + "   " + nicehours(checkOutTime/1000) + ":                      visitor checked out (again)\n"
+		print nicetime(pt["time"]/1000), "*** WARNING double check out"
+	    else:
+		doorList.append({"time":checkOutTime, "text":":                      visitor checked out"})
+		doorString2 = doorString2 + "   " + nicehours(checkOutTime/1000) + ":                      visitor checked out\n"
+	    visitor = False
         elif ("entry_exit" not in pt["name"].lower() 
 	    and "binary" in pt["name"].lower() 
 	    and ("door" in pt["name"].lower() or "pir" in pt["name"].lower() or "movement" in pt["name"].lower())):
@@ -567,10 +586,12 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 		if doorDebug:
 		    print nicetime(pt["time"]/1000), pt["name"], " - Door closed, state=", state, "io:", INOUT
 		if doorOpenTime == 0:
+		    doorList.append({"time":doorCloseTime, "text":": Door closed: Note - was the door open all night?"})
 		    doorString2 =  doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed: Note - was the door open all night?\n"
 		    if doorDebug:
 		        print nicetime(pt["time"]/1000), "********************** Door was open all night!?!"
 		elif doorCloseTime - doorOpenTime > 1000*oneMinute*10:
+		    doorList.append({"time":doorCloseTime, "text":": Note - door was open for "	+ str((doorCloseTime - doorOpenTime)/1000/60) + " minutes"})
 		    doorString2 =  doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Note - door was open for "\
 			+ str((doorCloseTime - doorOpenTime)/1000/60) + " minutes\n"
 		    if doorDebug:
@@ -630,48 +651,25 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 		    state = "WFDTO"
 		    if INOUT == "in":
 			if PIR and pt["time"] > doorCloseTime + 20*1000:#  and pt["time"] - doorCloseTime < 1000*30*oneMinute:
-			    if visitor == True: # what if PIR happens before checkin/out??? 2017-04-27 15:29:22
-				if abs(checkInTime-doorCloseTime) < 8*oneMinute*1000:
-				    if doorDebug:
-					print nicetime(pt["time"]/1000), "** didn't leave - visitor checked in", nicetime(doorCloseTime/1000),\
-					    "waited ", (pt["time"] - doorCloseTime)/1000/60, "minutes for pir\n"
-				    doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000)\
-				    + ": Door closed, didn't leave, visitor checked in\n"
-				    doorList.append({nicehours(doorCloseTime/1000):"Door closed, didn't leave, visitor checked in"})
-				else:
-				    print nicetime(pt["time"]/1000), "** WARNING Didn't leave - but visitor checkin doesn't correlate. Door closed:",\
-					nicetime(doorCloseTime/1000), "but checkin was at:", nicetime(checkInTime/1000)
-			    else:
-				if abs(checkOutTime-doorCloseTime) < 5*oneMinute*1000:
-				    if doorDebug:
-					print nicetime(pt["time"]/1000), "** didn't leave - visitor checked out", nicetime(doorCloseTime/1000),\
-					    "waited ", (pt["time"] - doorCloseTime)/1000/60, "minutes for pir\n"
-				    doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, didn't leave, visitor checked out\n"
-				    doorList.append({nicehours(doorCloseTime/1000):"Door closed, didn't leave, visitor checked out"})
-				else:    
-				    if doorDebug:
-					print nicetime(pt["time"]/1000), "** didn't leave at", nicetime(doorCloseTime/1000),\
-					    "waited ", (pt["time"] - doorCloseTime)/1000/60, "minutes for pir\n"
-				    doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, didn't leave\n"
-				    doorList.append({nicehours(doorCloseTime/1000):"Door closed, didn't leave"})
+			    if doorDebug:
+				print nicetime(pt["time"]/1000), "** didn't leave at", nicetime(doorCloseTime/1000),\
+				    "waited ", (pt["time"] - doorCloseTime)/1000/60, "minutes for pir\n"
+			    doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, didn't leave\n"
+		    	    doorList.append({"time":doorCloseTime, "text":": Door closed, didn't leave"})
 			elif PIR and pt["time"] > doorCloseTime + 20*1000 and pt["time"] - doorCloseTime > 1000*oneHour*2:
                             if doorDebug:
 			        print nicetime(pt["time"]/1000), "** Didn't leave at", nicetime(doorCloseTime/1000), "but no activity for", \
 				    (pt["time"] - doorCloseTime)/1000/60, "minutes\n"
 			    doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, didn't leave\n"
-			    doorList.append({nicehours(doorCloseTime/1000):"Door closed, didn't leave (but no activity for " +
+			    doorList.append({"time":doorCloseTime, "text":": Door closed, didn't leave (but no activity for " +
 				str((pt["time"]-doorCloseTime)/1000/60) + " minutes - asleep?)"})
 		    elif INOUT == "out" or INOUT =="maybe":
                         if doorDebug:
 			    print nicetime(pt["time"]/1000), "** Came in at", nicetime(doorCloseTime/1000),\
 			        "visitor:", visitor, "waited", (pt["time"] - doorCloseTime)/1000/60, "minutes for PIR\n"
 			INOUT = "in"
-			if abs(checkInTime-doorCloseTime) < 5*oneMinute*1000:
-			    doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, came in  and visitor checked in\n"
-			    doorList.append({nicehours(doorCloseTime/1000):"Door closed, came in"}) 
-			else:
-			    doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, came in\n"
-			    doorList.append({nicehours(doorCloseTime/1000):"Door closed, came in"}) 
+			doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, came in\n"
+			doorList.append({"time":doorCloseTime, "text":": Door closed, came in"}) 
 		    else:
 			print nicetime(pt["time"]/1000), "Strange value on INOUT", INOUT
 		elif doorOpened:
@@ -691,7 +689,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 			    if doorDebug:
 				print nicetime(pt["time"]/1000), "** Went out and visitor checked out at", nicetime(doorCloseTime/1000),\
 				    "cause door opened again", (pt["time"]-doorCloseTime)/1000, "seconds later\n"
-			    ds = ds + " and visitor checked out"
+			    # ds = ds + " and visitor checked out"
 			if teleOn:
 			    ds = ds + " (TV still on)"
 			    if doorDebug:
@@ -700,21 +698,21 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 			    #doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, went out (TV still on)\n"
 			    #doorList.append({nicehours(doorCloseTime/1000):"Door closed, went out (TV still on)"})
 			doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, went out" + ds + "\n"
-			doorList.append({nicehours(doorCloseTime/1000):"Door closed, went out"+ds})
+			doorList.append({"time":doorCloseTime, "text": ": Door closed, went out"+ds})
 			INOUT = "out"
 		    elif INOUT == "maybe": 
 			if doorDebug:
 			    print nicetime(pt["time"]/1000), "** In and out at", nicetime(doorCloseTime/1000), "cause door opened again", \
 			        (pt["time"]-doorCloseTime)/1000/60, "minutes later\n"
 			doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, in and out\n"
-			doorList.append({nicehours(doorCloseTime/1000):"Door closed, in and out"}) 
+			doorList.append({"time":doorCloseTime,"text":": Door closed, in and out"}) 
 			INOUT = "out"
 		    elif INOUT == "out":
 			if doorDebug:
 			    print nicetime(pt["time"]/1000), "** Didn't come in at", nicetime(doorCloseTime/1000), "cause door opened again", \
 			        (pt["time"]-doorCloseTime)/1000/60, "minutes later\n"
 			#doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, came in but didn't stay\n"
-			doorList.append({nicehours(doorCloseTime/1000):"Door closed, came in but didn't stay"}) 
+			doorList.append({"time":doorCloseTime,"text:":": Door closed, came in but didn't stay"}) 
 			INOUT = "out"
 		    else:
 			print nicetime(pt["time"]/1000), "Strange value in WFPIR. INOUT:", INOUT
@@ -803,13 +801,17 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 
     # bedtime
     #for pt in allSeries: # main loop
-        if pt["time"] > (startTime + 14*oneHour+30*oneMinute)*1000 and pt["time"] < 1000*endTime and not inBed:
+        if state == "WFPIR":
+	    if latestOne and bedtimeDebug:
+		print nicetime(pt["time"]/1000), " resetting latestOne from", nicetime(latestOne["time"]/1000), "cos door opened"
+	    latestOne = {}
+	elif pt["time"] > (startTime + 14*oneHour+30*oneMinute)*1000 and pt["time"] < 1000*endTime and not inBed:
             if (("pir" in pt["name"].lower() or "movement" in pt["name"].lower())
 	        and "binary" in pt["name"].lower()
 	        and "bedroom" not in pt["name"].lower()
 	        and pt["value"] == 1):
-                latestOne = pt # a potential latest non-bedroom PIR activity
-                if bedtimeDebug:
+		latestOne = pt # a potential latest non-bedroom PIR activity
+		if bedtimeDebug:
 		    print nicetime(pt["time"]/1000), "potential latestOne at", nicetime(pt["time"]/1000), "in", pt["name"]
 	    else: # use noise from everything else to give us the time
 		# print nicetime(pt["time"]/1000), "tick set by:", pt["name"] 
@@ -832,7 +834,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 			if teleOn:
 			    bedtimeString = bedtimeString + "\n      TV still on"
 		    elif bedtimeDebug:
-		    	print "not gone to bed at", nicetime(latestOne["time"]/1000), "cause delay mins = ", (pt["time"] - latestOne["time"])/1000/60
+		    	print nicetime(pt["time"]/1000), "I/O=", INOUT, "doorstate:", state, "not gone to bed at", nicetime(latestOne["time"]/1000), "cause delay mins = ", (pt["time"] - latestOne["time"])/1000/60
         # wanders
         if inBed:
 	    bStr = "bedtime"
@@ -1097,12 +1099,12 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	    if doorDebug:
 		print nicetime(pt["time"]/1000), "So: Came in at", nicetime(doorCloseTime/1000), "but didn't stay and not back before 6am" 
 	    doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, came in but didn't stay and not back before 6am\n"
-	    doorList.append({nicehours(doorCloseTime/1000):"Door closed, came in but didn't stay and not back before 6am"})
+	    doorList.append({"time":doorCloseTime, "text":": Door closed, came in but didn't stay and not back before 6am"})
 	elif state == "WFPIR" and INOUT == "in":
 	    if doorDebug:
 		print nicetime(pt["time"]/1000), "So: Went out at", nicetime(doorCloseTime/1000), "and not back before 6am"
 	    doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, went out - not back before 6am\n"
-	    doorList.append({nicehours(doorCloseTime/1000):"Door closed, , went out - not back before 6am"})
+	    doorList.append({"time":doorCloseTime, "text":": Door closed, , went out - not back before 6am"})
 
 	elif INOUT == "out" and (state == "WFDTO" or state == "WFPIR"):
 	    if doorDebug:
@@ -1125,10 +1127,16 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     print "*** ignored", dupCount, "duplicate points"
     #print "*** sensorsFound:", json.dumps(sensorsFound, indent=4)
 
-    Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + showerString + bedtimeString + wstr + busyString + doorString2 + "\n"
+    doorList.sort(key=operator.itemgetter('time'))
+    for x in doorList:
+	doorString3 = doorString3 + "   " + nicehours(x["time"]/1000) + x["text"] + "\n"
+    #strDiff = _unidiff_output(doorString2, doorString3)
+    #print "Diffs:", strDiff
+
+    Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + showerString + bedtimeString + wstr + busyString + doorString3 + "\n"
 
     print "\n", Text 
-    
+
     #exit()
     #print "D:", json.dumps(D, indent=4)
     #f = bid + "_" + nicedate(startTime) + "_from_6am.txt"
