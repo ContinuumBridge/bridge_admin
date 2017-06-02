@@ -712,7 +712,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 			    print nicetime(pt["time"]/1000), "** Didn't come in at", nicetime(doorCloseTime/1000), "cause door opened again", \
 			        (pt["time"]-doorCloseTime)/1000/60, "minutes later\n"
 			#doorString2 = doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed, came in but didn't stay\n"
-			doorList.append({"time":doorCloseTime,"text:":": Door closed, came in but didn't stay"}) 
+			doorList.append({"time":doorCloseTime,"text":": Door closed, came in but didn't stay"}) 
 			INOUT = "out"
 		    else:
 			print nicetime(pt["time"]/1000), "Strange value in WFPIR. INOUT:", INOUT
@@ -991,6 +991,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 
 	if wanderDebug:
 	    print "EOW after:", json.dumps(wanders,indent=4)
+    if wanders: # if there are any left
 	wstr = "\n      Wanders outside the bedroom after " + bStr + " at:\n"
 	for x in wanders:
 	    if wanderDebug:
@@ -1007,7 +1008,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 		    wstr = wstr + getsensor(y) + ", "
     elif inBed:
 	D["wanders"] = "No wanders outside the bedroom after  " + bStr
-	wstr = "\n   No wanders outside the bedroom after " + bStr + "\n"
+	wstr = "\n      No wanders outside the bedroom after " + bStr + "\n"
     if b_wanders:
 	b_wstr = "      Wanders in the bedroom after " + bStr + " at:\n"
 	for x in b_wanders:
@@ -1141,7 +1142,10 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 
     doorList.sort(key=operator.itemgetter('time'))
     for x in doorList:
-	doorString3 = doorString3 + "   " + nicehours(x["time"]/1000) + x["text"] + "\n"
+	try:
+	    doorString3 = doorString3 + "   " + nicehours(x["time"]/1000) + x["text"] + "\n"
+	except:
+	    print "ERROR in doorList:", json.dumps(x,indent=4)
     #strDiff = _unidiff_output(doorString2, doorString3)
     #print "Diffs:", strDiff
 
