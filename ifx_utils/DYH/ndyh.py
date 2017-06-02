@@ -535,7 +535,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 		kettleOn = False
 	    prevKettlePower = pt["value"]
 	if "toaster"  in pt["name"].lower()and "power" in pt["name"].lower():
-	    if pt["value"] > 1000:
+	    if pt["value"] > 700:
 		if pt["time"] > toasterOnTime + 5*oneMinute*1000:
 		    toasterOnTimes.append(nicehours(pt["time"]/1000))
 		    #print "toaster on at", nicehours(pt["time"]/1000), "power:", pt["value"]
@@ -902,6 +902,18 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	D["kettle"] = "No kettle data"
 	kettleString = "      No kettle data\n"
 	#print "      no kettle data"
+    if toasterOnTimes:
+	D["toaste"] = toasterOnTimes
+	toasterString = "      Toaster on at: "
+	for i in toasterOnTimes:
+	    toasterString = toasterString + i 
+	    if toasterOnTimes.index(i) < len(toasterOnTimes)-1:
+		toasterString = toasterString + ", "
+	    else:
+		toasterString = toasterString + "\n"
+    else:
+	D["toaster"] = "No toaster data"
+	toasterString = "      No toaster\n"
     if microOnTimes:
 	D["microwave"] = microOnTimes
 	microString = "      Microwave on at: "
@@ -1133,7 +1145,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     #strDiff = _unidiff_output(doorString2, doorString3)
     #print "Diffs:", strDiff
 
-    Text = Text + uptimeString + teleString + kettleString + microString + washerString + ovenString + cookerString + showerString + bedtimeString + wstr + busyString + doorString3 + "\n"
+    Text = Text + uptimeString + teleString + kettleString + toasterString + microString + washerString + ovenString + cookerString + showerString + bedtimeString + wstr + busyString + doorString3 + "\n"
 
     print "\n", Text 
 
