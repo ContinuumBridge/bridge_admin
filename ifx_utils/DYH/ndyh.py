@@ -186,7 +186,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     doorDebug = False
     if doors:
         doorDebug = True
-    uptimeDebug = False
+    uptimeDebug = True
     showerDebug = False
     wanderDebug = False
     teleOn = False
@@ -728,11 +728,14 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
         if (("binary" in pt["name"].lower() and pt["value"] == 1)
 	    or ("front" not in pt["name"].lower() and "binary" in pt["name"].lower() and "door" in pt["name"].lower() and pt["value"] == 1)):
             if (pt["time"]/1000 > startTime 
-                and pt["time"]/1000 < startTime +9*oneHour 
+                and pt["time"]/1000 < startTime +6*oneHour # was 9
                 and not gotUp):
+		# just forced it to be startTime+6hours as a quick fix
+		# but if came in was the first event then we should cancel uptime (2017-06-05)
+		# cause they were out all night
                 if len(upFifo) <= 10:
                     if uptimeDebug:
-                        print nicetime(pt["time"]/1000), "Appending morning activity on", pt["name"]
+                        print nicetime(pt["time"]/1000), "Appending morning activity on", pt["name"], "INOUT=", INOUT
                     gotUpTime = pt["time"]
                     upFifo.append(gotUpTime)
                 else:
