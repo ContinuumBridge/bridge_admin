@@ -497,8 +497,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 		    #print "oven on at", nicehours(pt["time"]/1000), "power:", pt["value"], "on", pt["name"]
 		ovenOnTime = pt["time"]
 	if "cooker" in pt["name"].lower() and "power" in pt["name"].lower()and "power" :
-            # REMOVE EXTRA CONDITIONS AFTER 25th APRIL...!!!!!
-	    if pt["value"] == prevCookerPower or (pt["value"] == 1276.12 and pt["time"] < 1000*(startTime + 4*oneHour)):
+            # EXTRA POWER CONDITION REMOVES SPURIOUS VALUE ON BRIDGE RESTART...!!!!!
+	    if pt["value"] == prevCookerPower or (pt["value"] == 1872.04 and pt["time"] < 1000*(startTime + 4*oneHour)):
 		print "*** Cooker point", nicehours(pt["time"]/1000), "cooker point ignored. Power:", pt["value"]
 	    elif pt["value"] > 300:
 		if pt["time"] > cookerOnTime + 10*oneMinute*1000:
