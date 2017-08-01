@@ -24,12 +24,16 @@ dburl = "http://onepointtwentyone-horsebrokedown-1.c.influxdb.com:8086/"
 
 @click.command()
 @click.option('--db', nargs=1, help='The database')
+@click.option('--bid', nargs=1, help='The bridge (all bridges if empty)')
 @click.option('--folder', nargs=1, help='The absolute path')
-def backup_by_series(db, folder):
+def backup_by_series(db, folder, bid):
 
     allSeries=[]
 
-    q = "select * from /.*/ limit 1"
+    if bid:
+	q = "select * from /" + bid + "/ limit 1"
+    else:
+	q = "select * from /.*/ limit 1"
     query = urllib.urlencode ({'q':q})
     
     print "Requesting data from db", db

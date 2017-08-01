@@ -84,7 +84,6 @@ def delete_series (bid, db, select):
 		    print "couldn't drop", tg["name"]
     else:
 	exit()
-
 if __name__ == '__main__':
     delete_series()
 
