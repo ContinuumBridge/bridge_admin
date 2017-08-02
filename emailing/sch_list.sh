@@ -9,14 +9,14 @@
 cd /home/ubuntu/bridge_admin/ifx_utils/CBr_mailing
 
 # CBr
-date
-./ifx_CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --bid BID66 --db "Bridges" --template "2016-12-05_CBr_table_template.htm" --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com, Praminda.Caleb-solly@uwe.ac.uk"
+#date
+#./ifx_CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --bid BID66 --db "Bridges" --template "2016-12-05_CBr_table_template.htm" --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com, Praminda.Caleb-solly@uwe.ac.uk"
 
-date
-./friendly_CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --bid BID241 --db "Bridges" --template "2016-12-05_CBr_table_template.htm" --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com, steve.barraclough@continuumbridge.com"
+#date
+#./friendly_CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --bid BID241 --db "Bridges" --template "2016-12-05_CBr_table_template.htm" --to "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com, steve.barraclough@continuumbridge.com"
 
-date
-./friendly_CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --bid BID11 --db "Bridges" --template "2016-12-05_CBr_table_template.htm" --to "martin.sotheran@continuumbridge.com"
+#date
+#./friendly_CBr_mail.py --user bridges@continuumbridge.com --password Mucht00f@r --bid BID11 --db "Bridges" --template "2016-12-05_CBr_table_template.htm" --to "martin.sotheran@continuumbridge.com"
 
 # Sirona
 #date
