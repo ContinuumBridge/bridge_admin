@@ -141,6 +141,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     i_time = 0
     i_data = 2
     D = {}
+    pts = {}
+    IOpts = {}
     print "start time:", nicetime(startTime)
     print "end time:", nicetime(endTime)
     D["BID"] = bid
@@ -162,7 +164,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     print "fetching from:", url
     r = requests.get(url)
     pts = r.json()
-    #print json.dumps(r.json(), indent=4)
+    print json.dumps(r.json(), indent=4)
 
     db1 = "Spur"
     subString = "615"
@@ -171,8 +173,12 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     print "Requesting list of series from", nicetime(earlyStartTime), "to", nicetime(endTime)
     url = dburl + "db/" + db1 + "/series?u=root&p=27ff25609da60f2d&" + query
     print "fetching from:", url
-    r1 = requests.get(url)
-    IOpts = r1.json()
+    try:
+        r1 = requests.get(url)
+        IOpts = r1.json()
+    except:
+        print "Warning: no Spur points"
+
     print len(IOpts), "series fetched\n"
     #print "IOpts:", json.dumps(IOpts, indent=4)
 
@@ -186,7 +192,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     doorDebug = False
     if doors:
         doorDebug = True
-    uptimeDebug = True
+    uptimeDebug = False
     showerDebug = False
     wanderDebug = False
     teleOn = False
@@ -215,6 +221,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
                 allSeries.append({"time":point[i_time], "name": item["name"], "value": point[i_data]})
     allSeries.sort(key=operator.itemgetter('time'))
 
+    pt = {}
     prevpt = {}
 
     # doors
