@@ -164,7 +164,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     print "fetching from:", url
     r = requests.get(url)
     pts = r.json()
-    print json.dumps(r.json(), indent=4)
+    #print json.dumps(r.json(), indent=4)
 
     db1 = "Spur"
     subString = "615"
