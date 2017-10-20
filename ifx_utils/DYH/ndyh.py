@@ -755,7 +755,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 		    #print "len:", len(upFifo), "last:", nicetime(last/1000), "popped last:", nicetime(first/1000)
 		    #print "last-first:", nicehours(last/1000), "-", nicehours(first/1000), "=", (last-first)/1000/60, "minutes"
 		    # For the general case (any bridge), this needs to depend on a history of aggregate activity. Not just 26mins
-		    if (last-first) <= 1000*oneMinute*35: # was 26mins but Lounge & bedroom batteries are dead
+		    if (last-first) <= 1000*oneMinute*39: # was 26mins but Lounge & bedroom batteries are dead
 			if uptimeDebug:
 			    print "Got up at", nicetime(gotUpTime/1000)
 			gotUp = True
