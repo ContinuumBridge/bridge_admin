@@ -22,6 +22,7 @@ import urllib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.MIMEImage import MIMEImage
+from influxdb import InfluxDBClient
 
 #Constants
 oneMinute          = 60
@@ -31,15 +32,10 @@ dburl = "http://onepointtwentyone-horsebrokedown-1.c.influxdb.com:8086/"
 
 # fake a config file for now
 config = {
-    #"cid": "CID164",
-    #"cid_key": "3fb46d8ebcS+Klsv89yk6XgedLEqT0r8S7gqJODZFy7H0Zflj+kPxLyLpWSI4OIm",
     #"twilio_account_sid": "AC72bb42908df845e8a1996fee487215d8",
     #"twilio_auth_token": "717534e8d9e704573e65df65f6f08d54",
     #"twilio_phone_number": "+441183241580",
-    #"service_providers": {
-    #    "pumpco": {
-    #        "url": "https://gaia.cnect.to/PumpHouse/rest/v1/devices/"
-    #       }
+    "dburl2": "ec2-54-171-237-126.eu-west-1.compute.amazonaws.com",
     "dburl": "http://onepointtwentyone-horsebrokedown-1.c.influxdb.com:8086/",
     "dbrootp": "27ff25609da60f2d",
     "mail": {
@@ -142,7 +138,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     i_data = 2
     D = {}
     pts = {}
-    IOpts = {}
+    IOpts = []
     print "start time:", nicetime(startTime)
     print "end time:", nicetime(endTime)
     D["BID"] = bid
@@ -157,6 +153,72 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     # So we'll ask for 1 day before startTime on the grounds that we'd always change a battery in that time      
     # select * from /BID11/ where time > 1427025600s and time < 1427112000s
     earlyStartTime = startTime - oneDay
+    client = InfluxDBClient(host=config["dburl2"], port=8086, database=db)
+
+
+    l = client.get_list_database()
+    print("Databases: {}".format(l))
+
+    #from pprint import pprint
+    #pprint(dir(client))
+
+    query = "SELECT * FROM " + bid + " where time > " + str(earlyStartTime) + "s and time <" + str(endTime) + "s"
+    #query = "SELECT \"value\" FROM " + bid + " WHERE (\"characteristic\" = 'binary') AND time >= now()-2d AND time <= now()"
+    #query = "SELECT * FROM " + bid + " WHERE (\"characteristic\" = 'binary') AND time >= now()-2d AND time <= now()"
+
+    result = client.query(query, epoch="ms")
+    print "Activity fetched:", len(list(result.get_points())), "points"
+    print "items:", result.items()
+    print "keys:", result.keys()
+
+
+    res = list(result.get_points())
+    #print "res:", json.dumps(res, indent=4)
+
+    # Get the Spur data
+    """
+    data: [
+    {
+        'fields':{'value': 1}, 
+        'tags': {
+            'device': u'Martins_615_at_DYH', 
+            'list': u'ContinuumBridge_Buttons'
+             }, 
+        'time': 1509272876000, 
+        'measurement': 'wakeup'
+    }]
+    """
+    client.switch_database("Spur")
+    #meas = list(client.query("SHOW MEASUREMENTS").get_points())
+    #print "meas:", json.dumps(meas, indent=4)
+
+    query = "SELECT * FROM Visitor_checked_in where time > " + str(earlyStartTime) + "s and time <" + str(endTime) + "s"
+    in_result = client.query(query, epoch="ms")
+    print "checked_in  fetched:", len(list(in_result.get_points())), "points"
+    #print "in items:", in_result.items()
+    #print "in keys:", in_result.keys()
+    in_res = list(in_result.get_points())
+    #print "in res:", json.dumps(in_res, indent=4)
+
+    for m in in_res:
+        IOpts.append({"time":m["time"], "name":"Visitor_checked_in", "value":m["value"], "characteristic":"Visitor_checked_in"})
+
+    # and the outs
+    query = "SELECT * FROM Visitor_checked_out where time > " + str(earlyStartTime) + "s and time <" + str(endTime) + "s"
+    out_result = client.query(query, epoch="ms")
+    print "checked_out fetched:", len(list(out_result.get_points())), "points"
+    #print "out items:", out_result.items()
+    #print "out keys:", out_result.keys()
+    out_res = list(out_result.get_points())
+    #print "out res:", json.dumps(out_res, indent=4)
+
+
+    for m in out_res:
+        IOpts.append({"time":m["time"], "name":"Visitor_checked_out", "value":m["value"], "characteristic":"Visitor_checked_out"})
+
+    #print "IOpts:", json.dumps(IOpts, indent=4)
+
+    """
     q = "select * from /" + bid + "/ where time >" + str(earlyStartTime) + "s and time <" + str(endTime) + "s"
     query = urllib.urlencode ({'q':q})
     print "Requesting list of series from", nicetime(earlyStartTime), "to", nicetime(endTime)
@@ -181,7 +243,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 
     print len(IOpts), "series fetched\n"
     #print "IOpts:", json.dumps(IOpts, indent=4)
-
+    """
 
     Text = "Summary of " + nicedate(startTime) + " from " + nicehours(startTime) + "am\n"
     selectedSeries = []
@@ -192,7 +254,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     doorDebug = False
     if doors:
         doorDebug = True
-    uptimeDebug = True
+    uptimeDebug = False
     showerDebug = False
     wanderDebug = False
     teleOn = False
@@ -202,11 +264,29 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     inBed = False
     rooms = []
     doors = []
-
+    """
+    {
+        "points": [
+            [
+                1506937771104,
+                20246390001,
+                30.37
+            ]
+        ],
+        "name": "BID264/Cooker/temperature",
+        "columns": [
+            "time",
+            "sequence_number",
+            "value"
+        ]
+    },
+    """
     for checks in IOpts:
-	for cp in checks["points"]:
-	    if cp[i_time] >= startTime*1000 and cp[i_time]/1000 <=startTime + oneDay and "checked" in checks["name"]:
-		allSeries.append({"time":cp[i_time], "name": checks["name"], "value": cp[i_data]})
+        if checks["time"] >= startTime*1000 and checks["time"]/1000 <=startTime + oneDay and "checked" in checks["name"]:
+            allSeries.append({"time":checks["time"], "name": checks["name"], "value": checks["value"], "char":checks["characteristic"]})
+        else:
+            print "Not appending", json.dumps(checks,indent=4)
+    """
     for series in pts:
         #if ("power" in series["name"].lower() 
         #    or ("pir" in series["name"].lower() and "binary" in series["name"].lower())
@@ -220,7 +300,31 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
             if point[i_time] >= startTime*1000 and point[i_time]/1000 <=startTime + oneDay:
                 allSeries.append({"time":point[i_time], "name": item["name"], "value": point[i_data]})
     allSeries.sort(key=operator.itemgetter('time'))
+    """
 
+    """ As above, we're expecting a simple time, name, value """
+    for x in res:
+	if x["characteristic"] != "connected" and x["characteristic"] != "battery":
+            if x["time"] >= startTime*1000 and x["time"]/1000 <=startTime + oneDay:
+		# for ease we'll just build the old path format
+		full_name = bid + "/" + x["sensor"] + "/" + x["characteristic"]
+      	        if x["value"] != None:
+                    allSeries.append({"time":x["time"], "name":full_name, "value": x["value"], "char":x["characteristic"]})
+   	        elif x["fvalue"] != None:
+                    allSeries.append({"time":x["time"], "name":full_name, "value": x["fvalue"], "char":x["characteristic"]})
+                else:
+    	            print "WARNING: point is neither float nor int", json.dumps(x, indent=4)
+      	        """
+		if x["value"] != None:
+                    allSeries.append({"time":x["time"], "name": x["sensor"], "value": x["value"], "char":x["characteristic"]})
+   	        elif x["fvalue"] != None:
+                    allSeries.append({"time":x["time"], "name": x["sensor"], "value": x["fvalue"], "char":x["characteristic"]})
+                else:
+    	            print "WARNING: point is neither float nor int", json.dumps(x, indent=4)
+	        """
+    allSeries.sort(key=operator.itemgetter('time'))
+
+    #print "allseries:", json.dumps(allSeries, indent=4)
     pt = {}
     prevpt = {}
 
@@ -329,7 +433,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	    A1 = json.load(a)
 	print "Read activity ok", f
     except:
-	print "No activity: file"
+	print "No activity file"
     if not A1:
 	A1["Morning"] = []
 	A1["Afternoon"] = []
@@ -339,7 +443,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     for pt in allSeries: # main loop
         #print nicetime(pt["time"]/1000), "next event is", pt["value"], "on", pt["name"]
         if pt == prevpt:
-            #print nicetime(pt["time"]/1000), "*** Ignoring duplicate event", pt["value"], "on", pt["name"]
+            print nicetime(pt["time"]/1000), "*** Ignoring duplicate event", pt["value"], "on", pt["name"]
 	    dupCount+=1
             continue
         prevpt = pt
@@ -791,7 +895,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
         elif pt["time"] >= 1000*(startTime + 18*oneHour) and pt["time"] <= 1000*(startTime + 24*oneHour):
 	    slot = "Night"
 	else:
-	    print "**** business: something's wrong with the time"
+	    print "**** business: something's wrong with the time:", nicetime(pt["time"])
 	if (("pir" in pt["name"].lower() or "movement" in pt["name"].lower())
 	    and "binary" in pt["name"].lower()
 	    and pt["value"] == 1):
