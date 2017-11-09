@@ -85,8 +85,8 @@ def epochtime(date_time):
 def start():
     t = time.localtime(time.time() - oneDay)
     yesterday = time.strftime('%Y-%m-%d', t)
-    #s = yesterday + " 06:00:00"
-    s = yesterday + " 05:30:00"
+    s = yesterday + " 06:00:00"
+    #s = yesterday + " 05:30:00"
     return epochtime(s)
 
 def getwander (ss):
@@ -697,7 +697,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 		if doorDebug:
 		    print nicetime(pt["time"]/1000), pt["name"], " - Door closed, state=", state, "io:", INOUT
 		if doorOpenTime == 0:
-		    doorList.append({"time":doorCloseTime, "text":": Door closed: Note - was the door open all night?"})
+		    #doorList.append({"time":doorCloseTime, "text":": Door closed: Note - was the door open all night?"})
 		    doorString2 =  doorString2 + "   " + nicehours(doorCloseTime/1000) + ": Door closed: Note - was the door open all night?\n"
 		    if doorDebug:
 		        print nicetime(pt["time"]/1000), "********************** Door was open all night!?!"
@@ -919,7 +919,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	    if latestOne and bedtimeDebug:
 		print nicetime(pt["time"]/1000), " resetting latestOne from", nicetime(latestOne["time"]/1000), "cos door opened"
 	    latestOne = {}
-	elif pt["time"] > (startTime + 14*oneHour+30*oneMinute)*1000 and pt["time"] < 1000*endTime and not inBed:
+	elif pt["time"] > (startTime + 14*oneHour)*1000 and pt["time"] < 1000*endTime and not inBed:
             if (("pir" in pt["name"].lower() or "movement" in pt["name"].lower())
 	        and "binary" in pt["name"].lower()
 	        and "bedroom" not in pt["name"].lower()
