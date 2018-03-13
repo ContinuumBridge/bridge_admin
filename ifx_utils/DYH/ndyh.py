@@ -918,7 +918,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
         if state == "WFPIR":
 	    if latestOne and bedtimeDebug:
 		print nicetime(pt["time"]/1000), " resetting latestOne from", nicetime(latestOne["time"]/1000), "cos door opened"
-	    latestOne = {}
+	    latestOne = pt # {} using now rather than clearing it for came in straight to bed
 	elif pt["time"] > (startTime + 14*oneHour)*1000 and pt["time"] < 1000*endTime and not inBed:
             if (("pir" in pt["name"].lower() or "movement" in pt["name"].lower())
 	        and "binary" in pt["name"].lower()
