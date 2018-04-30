@@ -255,7 +255,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     if doors:
         doorDebug = True
     uptimeDebug = False
-    showerDebug = False
+    showerDebug = True
     wanderDebug = False
     teleOn = False
     INOUT = "fubar"
@@ -413,7 +413,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     #occWindow = 1000*oneMinute*20 # cause there can be a lag between occupancy and rising H
     occWindow = 1000*oneMinute*158 # cause there can be a lag between occupancy and rising H
     # lights
-    bathLuma = 0
+    bathLuma = 2 # benefit of the doubt - start the day with light on
     bedLuma = 0
     hallLuma = 0
     kitchenLuma = 0
@@ -475,7 +475,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     # lights
         if "lum" in pt["name"].lower():
 	    if "bathroom" in pt["name"].lower():
-	        bathLuma = pt["value"]
+                bathLuma = pt["value"]
 	    elif "bedroom" in pt["name"].lower():
 		bedLuma = pt["value"]
 	    elif "lounge" in pt["name"].lower():
@@ -521,24 +521,28 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	    and pt["value"] == 1): # reset occStart for every p 
 	    #if not occupied:
 	    #	print nicetime(pt["time"]/1000), "occStart set by:",  pt["name"] 
-	    occupied = True
-	    occStart = pt["time"]
+	    if bathLuma>1:
+                occupied = True
+	        occStart = pt["time"]
+            else:
+                print "Bathroom occupied but light is out - so not setting occStart"
+                occupied = False
 	elif pt["time"] > occStart + occWindow: # noise from everything else as a clock
-	    #if occupied:
-	    #	print nicetime(pt["time"]/1000), "empty set by:",  pt["name"] 
+	    if occupied:
+	    	print nicetime(pt["time"]/1000), "empty set by:",  pt["name"] 
 	    occupied = False
 
 	if (("bathroom" in pt["name"].lower() or "shower" in pt["name"].lower())
 	    and "humidity" in pt["name"].lower()):
             if prevH <> 0 and pt["value"] > prevH: 
-		bathroomSeries.append({"time": pt["time"], "value": pt["value"], "occ":occupied})
+		bathroomSeries.append({"time": pt["time"], "value": pt["value"], "occ":occupied, "lastOcc":occStart, "luma":bathLuma})
 		if showerDebug:
-		    print nicetime(pt["time"]/1000), "H risen from", prevH, "to", pt["value"], "occ:", occupied
+		    print nicetime(pt["time"]/1000), "H risen from", prevH, "to", pt["value"], "occ:", occupied, ", bathLuma:", bathLuma
 	    else: # p H fell
 		if len(bathroomSeries) > 1 and not noMoreShowersTillItFalls:
 		    if showerDebug:
 			for i in bathroomSeries:
-			    print nicetime(i["time"]/1000), "i", i["value"]
+			    print nicetime(i["time"]/1000), "i", i["value"], "lastOcc:", nicetime(i["lastOcc"]/1000), "luma:", i["luma"]
 		    for j in bathroomSeries:
 			if showerDebug:
 			    print nicetime(j["time"]/1000), "j", j["value"], "nmstif:",noMoreShowersTillItFalls 
@@ -558,27 +562,30 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 				c1 = -19
 				m2 = 54
 				c2 = -429
-				if (deltaT < 360 and deltaH > 2 and 
+				if (deltaT < 360 and deltaH > 6 and 
 				    ((deltaH <= 10 and deltaT <= m1*deltaH +c1) 
 				    or (deltaH > 10 and deltaT < m2*deltaH + c2))):
-				    if k["occ"]:
-					if showerDebug:
-					    print "**nSHOWER at :", nicetime(prevT/1000),\
-						"k_time:", nicetime(k["time"]/1000),\
+			            if k["occ"]: # and k["luma"]>0: # luma is a failed experiment - needs to be luma at lastOcc not k
+				        if showerDebug:
+				            print "**nSHOWER at :", nicetime(prevT/1000),\
+					        "k_time:", nicetime(k["time"]/1000),\
 						"dh:", k["value"] - j["value"], \
-						"dt:",(k["time"] - j["time"])/1000/60
+						"dt:",(k["time"] - j["time"])/1000/60, \
+                                                "lastOcc:", nicetime(k["lastOcc"]/1000), \
+                                                "bathLuma now:", k["luma"]
 				        noMoreShowersTillItFalls = True
-				        showerTimes.append(k["time"])
-				    else:
-					if showerDebug:
+				        #showerTimes.append(k["time"])
+				        showerTimes.append(k["lastOcc"])
+ 				    else:
+				        if showerDebug:
 					    print "No show shower at j:", nicetime(j["time"]/1000), "k:", nicetime(k["time"]/1000),\
-						"cause dt=", deltaT, "dh=", deltaH
+					    "cause dt=", deltaT, "dh=", deltaH, "luma:", k["luma"]
 				else:
 				    if showerDebug:
 					print "No shower at j:", nicetime(j["time"]/1000), "k:", nicetime(k["time"]/1000),\
 					"cause dt=", deltaT, "dh=", deltaH
 	        noMoreShowersTillItFalls = False
-	        bathroomSeries = [{"time": pt["time"], "value": pt["value"]}]
+	        bathroomSeries = [{"time": pt["time"], "value": pt["value"], "lastOcc":0, "luma": bathLuma}]
        	        #if showerDebug:
 	        #    print nicetime(pt["time"]/1000), "H fell from", prevH, "to", pt["value"]
 	    prevT = pt["time"]
