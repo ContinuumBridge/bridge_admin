@@ -255,7 +255,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     if doors:
         doorDebug = True
     uptimeDebug = False
-    showerDebug = True
+    showerDebug = False
     wanderDebug = False
     teleOn = False
     INOUT = "fubar"
@@ -525,11 +525,13 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
                 occupied = True
 	        occStart = pt["time"]
             else:
-                print "Bathroom occupied but light is out - so not setting occStart"
+		if showerDebug:
+                    print "Bathroom occupied but light is out - so not setting occStart"
                 occupied = False
 	elif pt["time"] > occStart + occWindow: # noise from everything else as a clock
 	    if occupied:
-	    	print nicetime(pt["time"]/1000), "empty set by:",  pt["name"] 
+		if showerDebug:
+	    	    print nicetime(pt["time"]/1000), "empty set by:",  pt["name"] 
 	    occupied = False
 
 	if (("bathroom" in pt["name"].lower() or "shower" in pt["name"].lower())
@@ -924,8 +926,11 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     #for pt in allSeries: # main loop
         if state == "WFPIR":
 	    if latestOne and bedtimeDebug:
-		print nicetime(pt["time"]/1000), " resetting latestOne from", nicetime(latestOne["time"]/1000), "cos door opened"
-	    latestOne = pt # {} using now rather than clearing it for came in straight to bed
+		print nicetime(pt["time"]/1000), " WFPIR - resetting latestOne from", nicetime(latestOne["time"]/1000), "cos door opened"
+	    elif bedtimeDebug:
+		print nicetime(pt["time"]/1000), " WFPIR - resetting latestOne cos door opened"
+	    latestOne = {} # it would be better to use now (pt) rather than clearing it but WFPIR doesn't 
+                           # clear immediately so we can miss came_in and wemt straight to bed. See 2018-03-12
 	elif pt["time"] > (startTime + 14*oneHour)*1000 and pt["time"] < 1000*endTime and not inBed:
             if (("pir" in pt["name"].lower() or "movement" in pt["name"].lower())
 	        and "binary" in pt["name"].lower()
