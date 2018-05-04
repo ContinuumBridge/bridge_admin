@@ -484,7 +484,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 		kitchenLuma = pt["value"]
 	    elif "hall" in pt["name"].lower():
 		hallLuma = pt["value"]
-	    if (inBed and pt["time"] > bedTime + 30*oneMinute*1000 
+	    if (inBed and pt["time"] > bedTime + 30*oneMinute*1000 and pt["time"] < bedTime + 60*oneMinute*1000 
 		and not lumaWarned): 
 		if not (pt["time"] > wanderStart and pt["time"] < wanderStart + wanderWindow*1000):
 		    lumaWarned = True
