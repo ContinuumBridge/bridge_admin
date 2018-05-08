@@ -125,11 +125,11 @@ def postInfluxDB(dat, bid):
 @click.option('--to', nargs=1, help='The address to send the email to.')
 @click.option('--daysago', nargs=1, help='How far back to look')
 @click.option('--doors', nargs=1, help='whether to debug doors')
-@click.option('--shower_mail', nargs=1, help='whether to send Pete & I a shower mail')
+@click.option('--warning_mails', nargs=1, help='whether to send Pete & I a data warning mail')
 @click.option('--mail', nargs=1, help='whether to send a mail')
 @click.option('--writetoifx', nargs=1, help='whether to write to influx')
 
-def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writetoifx):
+def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, writetoifx):
     daysAgo = int(daysago) #0 # 0 means yesterday
     startTime = start() - daysAgo*60*60*24
     endTime = startTime + oneDay
@@ -421,6 +421,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
     lumaWarned = False
     lumaWarning = False
     lumaStr = ""
+    # for checking if data_client is ok
+    data_client_ok = False
     # random bits'n'pieces
     ifxData = []
     dupCount = 0
@@ -447,7 +449,10 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	    dupCount+=1
             continue
         prevpt = pt
-
+        # data_client check
+        if pt["time"]/1000 > endTime - 6*oneHour:
+            #print nicetime(pt["time"]/1000), "Got a pt in last 6 hours so client is ok", pt["name"], pt["value"]
+            data_client_ok = True
 
 	if "in_bed" in pt["name"].lower():
 	    print "***** ", nicetime(pt["time"]/1000), "found inBed =", pt["value"]
@@ -522,11 +527,13 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	    #if not occupied:
 	    #	print nicetime(pt["time"]/1000), "occStart set by:",  pt["name"] 
 	    if bathLuma>1:
+		if showerDebug:
+                    print nicetime(pt["time"]/1000), "Bathroom occupied with light on - setting occStart to now"
                 occupied = True
 	        occStart = pt["time"]
             else:
 		if showerDebug:
-                    print "Bathroom occupied but light is out - so not setting occStart"
+                    print nicetime(pt["time"]/1000), "Bathroom occupied but light is out - so not setting occStart"
                 occupied = False
 	elif pt["time"] > occStart + occWindow: # noise from everything else as a clock
 	    if occupied:
@@ -1352,7 +1359,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	    print "Summary mail sent to:", to
 	except Exception as ex:
 	    print "sendMail problem. To:", to, "type: ", type(ex), "exception: ", str(ex.args)
-    if shower_mail:
+    if False: #shower_mail:
 	try:
 	    to = "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com"
 	    e_txt = "Now running as part of dyh so start = 6am\nAnd unfortunately it's a mail for each bridge\n\n"
@@ -1383,6 +1390,41 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, shower_mail, writeto
 	    print "Shower mail sent to:", to
 	except Exception as ex:
 	    print "sendMail problem. To:", to, "type: ", type(ex), "exception: ", str(ex.args)
+    # end of data_client checking
+    if data_client_ok != True:
+        if warning_mails:
+	    try:
+		to = "martin.sotheran@continuumbridge.com, peter.claydon@continuumbridge.com"
+		e_txt = "No data from DYH for 6 hours\nSo either data_client or "+bid+" is down"
+		msg = MIMEMultipart('alternative')
+		msg['Subject'] = "No data from "+bid+" for 6 hours"
+		msg['From'] = "Bridges <bridges@continuumbridge.com>"
+		recipients = to.split(',')
+		[p.strip(' ') for p in recipients]
+		if len(recipients) == 1:
+		    msg['To'] = to
+		else:
+		    msg['To'] = ", ".join(recipients)
+		# Create the body of the message (a plain-text and an HTML version).
+		text = "Content only available with HTML email clients\n"
+		# Record the MIME types of both parts - text/plain and text/html.
+		part1 = MIMEText(e_txt, 'plain')
+		#part2 = MIMEText(htmlText, 'html')
+	    
+		msg.attach(part1)
+		#msg.attach(part2)
+		mail = smtplib.SMTP('smtp.gmail.com', 587)
+		mail.ehlo()
+		mail.starttls()
+		mail.login(user, password)
+		mail.sendmail(user, recipients, msg.as_string())
+		mail.quit()
+		print "Data warning mail sent to:", to
+	    except Exception as ex:
+		print "sendMail problem. To:", to, "type: ", type(ex), "exception: ", str(ex.args)
+        else:
+            print (time.strftime("%d/%m/%Y")), " *** WARNING no data in last 6 hours - but not sending mails"
+
     
                   
 if __name__ == '__main__':
