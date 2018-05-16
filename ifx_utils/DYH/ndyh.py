@@ -303,25 +303,43 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
     """
 
     """ As above, we're expecting a simple time, name, value """
+    appliances =[]
+    door_switches = []
+    PIRs = []
+    PIR_states = {}
     for x in res:
-	if x["characteristic"] != "connected" and x["characteristic"] != "battery":
+        if x["characteristic"] != "connected" and x["characteristic"] != "battery":
+            # for ease we'll just build the old path format
+            full_name = bid + "/" + x["sensor"] + "/" + x["characteristic"]
             if x["time"] >= startTime*1000 and x["time"]/1000 <=startTime + oneDay:
-		# for ease we'll just build the old path format
-		full_name = bid + "/" + x["sensor"] + "/" + x["characteristic"]
-      	        if x["value"] != None:
-                    allSeries.append({"time":x["time"], "name":full_name, "value": x["value"], "char":x["characteristic"]})
-   	        elif x["fvalue"] != None:
-                    allSeries.append({"time":x["time"], "name":full_name, "value": x["fvalue"], "char":x["characteristic"]})
+                if x["value"] != None:
+                    allSeries.append({"time":x["time"], "name":full_name, "sensor":x["sensor"], "value": x["value"], "char":x["characteristic"]})
+                elif x["fvalue"] != None:
+                    allSeries.append({"time":x["time"], "name":full_name, "sensor":x["sensor"], "value": x["fvalue"], "char":x["characteristic"]})
                 else:
-    	            print "WARNING: point is neither float nor int", json.dumps(x, indent=4)
-      	        """
-		if x["value"] != None:
-                    allSeries.append({"time":x["time"], "name": x["sensor"], "value": x["value"], "char":x["characteristic"]})
-   	        elif x["fvalue"] != None:
-                    allSeries.append({"time":x["time"], "name": x["sensor"], "value": x["fvalue"], "char":x["characteristic"]})
-                else:
-    	            print "WARNING: point is neither float nor int", json.dumps(x, indent=4)
-	        """
+                    print "WARNING: point is neither float nor int", json.dumps(x, indent=4)
+            # Let's see what sensors we have
+            if x["characteristic"] == "power":
+                if x["sensor"] not in appliances:
+                    print "Found a new TKB", x["sensor"]
+                    appliances.append(x["sensor"])
+                if x["sensor"] in door_switches:
+                    door_switches.remove(x["sensor"])
+            elif x["characteristic"] == "luminance" or x["characteristic"] == "humidity":
+                if x["sensor"] not in PIRs:
+                    print "Found a new PIR:", x["sensor"]
+                    PIRs.append(x["sensor"])
+                if x["sensor"] in door_switches:
+                    door_switches.remove(x["sensor"])
+            elif x["characteristic"] == "binary":
+                if x["sensor"] not in door_switches and x["sensor"] not in PIRs and x["sensor"] not in appliances:
+                    print "Found a new ES:", x["sensor"]
+                    door_switches.append(x["sensor"])
+    for x in PIRs:
+        PIR_states[x] = {"value":0,"time":0}
+
+    print "Found sensors:\n  ", PIRs, "\n  ", appliances, "\n  ", door_switches
+
     allSeries.sort(key=operator.itemgetter('time'))
 
     #print "allseries:", json.dumps(allSeries, indent=4)
@@ -457,24 +475,43 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 	if "in_bed" in pt["name"].lower():
 	    print "***** ", nicetime(pt["time"]/1000), "found inBed =", pt["value"]
 
+        """
     # WIP
-    # collect rooms so that ultimately this can be independent of dyh
-    # A bridge app would need to know which is the bedroom and the outside door.
-    # It'll infer which is the bathroom by finding humidity
-	if ("binary" in pt["name"].lower() or 
-	    "humidity" in pt["name"].lower() or
-	    "power" in pt["name"].lower() or
-	    "temperature" in pt["name"].lower() or
-	    "luminance" in pt["name"].lower()):
-	    foo = pt["name"].split('/')
-	    place = foo[1]
-	    char = foo[2]
-	    if place not in sensorsFound: 
-		sensorsFound[place] = [char]
-	        #print "new place: sensorFound:", json.dumps(sensorsFound, indent=4)
-	    if char not in sensorsFound[place]:
-		sensorsFound[place].append(char)
-	        #print "New char: sensorFound:", json.dumps(sensorsFound, indent=4)
+    # What room are we in
+        if pt["sensor"] in PIRs and pt["char"] == "binary": # and pt["value"] == 1:
+            if PIR_states[pt["sensor"]]["value"] != 1 and pt["value"] == 1:
+                #print nicetime(pt["time"]/1000), "in", json.dumps(PIR_states, indent=4) #pt["sensor"]
+                if lostAt != 0:
+                    if pt["sensor"] != lostFrom:
+                        print nicetime(pt["time"]/1000), "*** lost at", nicetime(lostAt/1000), "from", lostFrom, "but found in", pt["sensor"], "after", (pt["time"] - lostAt)/1000, "seconds"
+                    else:
+                        print nicetime(pt["time"]/1000), "lost at", nicetime(lostAt/1000), "in", lostFrom, "for", (pt["time"] - lostAt)/1000, "seconds"
+                    lostAt = 0
+                #else:
+                #    print nicetime(pt["time"]/1000), "entered", pt["sensor"]
+                otherRooms = []
+                for r in PIRs:
+                    if PIR_states[r]["value"] == 1:# and (pt["time"] - PIR_states[r]["time"])/1000 > oneMinute:
+                        otherRooms.append(r)
+                #if otherRooms:
+                #    print "    but still active in", otherRooms #r, "for", (pt["time"] - PIR_states[r]["time"])/1000, "seconds?"
+            else:
+                otherRooms = []
+                for r in PIRs:
+                    if PIR_states[r]["value"] == 1 and pt["sensor"] != r: # and (pt["time"] - PIR_states[r]["time"])/1000 > oneMinute:
+                        otherRooms.append(r)
+                if otherRooms:
+                    #print "Left", pt["name"], "but still in", otherRooms
+                    lostAt = 0 
+                else:
+                    lostAt =  pt["time"]
+                    lostFrom = pt["sensor"]
+                    #print nicetime(pt["time"]/1000), "Nowhere to be seen!", pt["sensor"], "->", pt["value"]
+                    #print nicetime(pt["time"]/1000), "states:", json.dumps(PIR_states, indent=4) #pt["sensor"]
+            PIR_states[pt["sensor"]]["value"] = pt["value"]
+            PIR_states[pt["sensor"]]["time"] = pt["time"]
+        """
+
 
 
     # lights
@@ -941,7 +978,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 	elif pt["time"] > (startTime + 14*oneHour)*1000 and pt["time"] < 1000*endTime and not inBed:
             if (("pir" in pt["name"].lower() or "movement" in pt["name"].lower())
 	        and "binary" in pt["name"].lower()
-	        and "bedroom" not in pt["name"].lower()
+	        # and "bedroom" not in pt["name"].lower() not sure why this was here so trying without and requiring bedroom occupancey
 	        and pt["value"] == 1):
 		latestOne = pt # a potential latest non-bedroom PIR activity
 		if bedtimeDebug:
@@ -956,16 +993,21 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 			    print "Still up at:", nicetime(latestOne["time"]/1000), "in", latestOne["name"],\
 				"delayMins=",(pt["time"] - latestOne["time"])/1000/60 
 		    elif pt["time"] - latestOne["time"] > 1000*oneMinute*61:
-                        bedtimeString = "   Went to bed at " + nicehours(latestOne["time"]/1000)
-                        D["bedTime"] = nicehours(latestOne["time"]/1000)
-			if bedtimeDebug:
-			    print "Went to bed at:", nicetime(latestOne["time"]/1000), "from", latestOne["name"],\
-				"delayMins=",(pt["time"] - latestOne["time"])/1000/60 
-			inBed = True
-			bedTime = latestOne["time"]
-			ifxData.append({"name": bid + "/In_bed", "points": [[bedTime, 1]]})
-			if teleOn:
-			    bedtimeString = bedtimeString + "\n      TV still on"
+			if "bedroom" not in latestOne["name"].lower():
+                            if True: #bedtimeDebug:
+                                print "Went to bed not", nicetime(latestOne["time"]/1000), "from", latestOne["name"],\
+				    "delayMins=",(pt["time"] - latestOne["time"])/1000/60 
+                        else:
+                            if True: #bedtimeDebug:
+			        print "Went to bed at:", nicetime(latestOne["time"]/1000), "from", latestOne["name"],\
+				    "delayMins=",(pt["time"] - latestOne["time"])/1000/60 
+			    bedtimeString = "   Went to bed at " + nicehours(latestOne["time"]/1000)
+			    D["bedTime"] = nicehours(latestOne["time"]/1000)
+			    inBed = True
+			    bedTime = latestOne["time"]
+			    ifxData.append({"name": bid + "/In_bed", "points": [[bedTime, 1]]})
+			    if teleOn:
+				bedtimeString = bedtimeString + "\n      TV still on"
 		    elif bedtimeDebug:
 		    	print nicetime(pt["time"]/1000), "I/O=", INOUT, "doorstate:", state, "not gone to bed at", nicetime(latestOne["time"]/1000), "cause delay mins = ", (pt["time"] - latestOne["time"])/1000/60
         # wanders
