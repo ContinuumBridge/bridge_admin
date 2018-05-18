@@ -375,6 +375,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
     #bedtime
     latestOne = {} 
     bedtimeString = "   Can't find bedtime\n"
+    inBedroom = 0
     #wanders
     wanderWindow = 15*oneMinute
     wanderTimes = []
@@ -461,7 +462,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 	A1["Evening"] = []
 
     for pt in allSeries: # main loop
-        #print nicetime(pt["time"]/1000), "next event is", pt["value"], "on", pt["name"]
+        # print nicetime(pt["time"]/1000), "next event is", pt["value"], "on", pt["name"]
         if pt == prevpt:
             print nicetime(pt["time"]/1000), "*** Ignoring duplicate event", pt["value"], "on", pt["name"]
 	    dupCount+=1
@@ -474,6 +475,11 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 
 	if "in_bed" in pt["name"].lower():
 	    print "***** ", nicetime(pt["time"]/1000), "found inBed =", pt["value"]
+
+	# this needs to be up here due to the continue in doors
+        if "bedroom" in pt["name"].lower() and "pir" in pt["name"].lower() and "binary" in pt["name"].lower():
+            inBedroom = pt["value"]
+            #print nicetime(pt["time"]/1000), "Setting inBedroom to:", inBedroom
 
         """
     # WIP
@@ -638,7 +644,6 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 	    prevH = pt["value"]
 
 
-
     # tv and appliances
     #for pt in allSeries: # main loop
 	if "tv" in pt["name"].lower() and "power" in pt["name"].lower():
@@ -733,7 +738,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 	    and "binary" in pt["name"].lower() 
 	    and ("door" in pt["name"].lower() or "pir" in pt["name"].lower() or "movement" in pt["name"].lower())):
             if ("pir" in pt["name"].lower()  or "movement" in pt["name"].lower()) and pt["value"] == 0:
-                continue
+                continue # Note that this causes pir zeros to be missed by all subsequent code
 	    PIR = False
 	    doorClosed = False
 	    doorOpened = False
@@ -886,6 +891,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 		
 	    else:
 		print nicetime(pt["time"]/1000), "Unknown state", state, "on", pt["name"]
+
     # uptime
     #for pt in allSeries: # main loop
         #if (("bed" not in pt["name"].lower() and "binary" in pt["name"].lower() and pt["value"] == 1) try it including bedroom
@@ -937,6 +943,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 		    else:
                         if uptimeDebug:
 			    print "Rejecting:", nicetime(first/1000), "cause it's 10 items in", (last-first)/1000/60, "minutes (need 26mins)"
+
     #busyness - just count the ones 
     #for pt in allSeries: # main loop
         if pt["time"] > startTime*1000 and pt["time"] <= 1000*(startTime + 6*oneHour):
@@ -948,7 +955,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
         elif pt["time"] >= 1000*(startTime + 18*oneHour) and pt["time"] <= 1000*(startTime + 24*oneHour):
 	    slot = "Night"
 	else:
-	    print "**** business: something's wrong with the time:", nicetime(pt["time"])
+	    print "**** busyness: something's wrong with the time:", nicetime(pt["time"])
 	if (("pir" in pt["name"].lower() or "movement" in pt["name"].lower())
 	    and "binary" in pt["name"].lower()
 	    and pt["value"] == 1):
@@ -969,20 +976,23 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
     # bedtime
     #for pt in allSeries: # main loop
         if state == "WFPIR":
-	    if latestOne and bedtimeDebug:
+	    """
+            if latestOne and bedtimeDebug:
 		print nicetime(pt["time"]/1000), " WFPIR - resetting latestOne from", nicetime(latestOne["time"]/1000), "cos door opened"
 	    elif bedtimeDebug:
 		print nicetime(pt["time"]/1000), " WFPIR - resetting latestOne cos door opened"
-	    latestOne = {} # it would be better to use now (pt) rather than clearing it but WFPIR doesn't 
+	    """
+            latestOne = {} # it would be better to use now (pt) rather than clearing it but WFPIR doesn't 
                            # clear immediately so we can miss came_in and wemt straight to bed. See 2018-03-12
 	elif pt["time"] > (startTime + 14*oneHour)*1000 and pt["time"] < 1000*endTime and not inBed:
             if (("pir" in pt["name"].lower() or "movement" in pt["name"].lower())
 	        and "binary" in pt["name"].lower()
-	        # and "bedroom" not in pt["name"].lower() not sure why this was here so trying without and requiring bedroom occupancey
+	        # and "bedroom" not in pt["name"].lower() needed this when PIR could see the bed - now trying requiring bedroom occupancey
 	        and pt["value"] == 1):
-		latestOne = pt # a potential latest non-bedroom PIR activity
+                latestOne = pt # a potential latest PIR activity
+                latestOne["inBedroom"] = inBedroom
 		if bedtimeDebug:
-		    print nicetime(pt["time"]/1000), "potential latestOne at", nicetime(pt["time"]/1000), "in", pt["name"]
+		    print nicetime(pt["time"]/1000), "potential latestOne at", nicetime(pt["time"]/1000), "in", pt["name"], "with inBedroom:", inBedroom
 	    else: # use noise from everything else to give us the time
 		# print nicetime(pt["time"]/1000), "tick set by:", pt["name"] 
 		if latestOne:
@@ -993,12 +1003,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 			    print "Still up at:", nicetime(latestOne["time"]/1000), "in", latestOne["name"],\
 				"delayMins=",(pt["time"] - latestOne["time"])/1000/60 
 		    elif pt["time"] - latestOne["time"] > 1000*oneMinute*61:
-			if "bedroom" not in latestOne["name"].lower():
-                            if True: #bedtimeDebug:
-                                print "Went to bed not", nicetime(latestOne["time"]/1000), "from", latestOne["name"],\
-				    "delayMins=",(pt["time"] - latestOne["time"])/1000/60 
-                        else:
-                            if True: #bedtimeDebug:
+			if latestOne["inBedroom"] == 1:
+                            if bedtimeDebug:
 			        print "Went to bed at:", nicetime(latestOne["time"]/1000), "from", latestOne["name"],\
 				    "delayMins=",(pt["time"] - latestOne["time"])/1000/60 
 			    bedtimeString = "   Went to bed at " + nicehours(latestOne["time"]/1000)
@@ -1008,8 +1014,13 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 			    ifxData.append({"name": bid + "/In_bed", "points": [[bedTime, 1]]})
 			    if teleOn:
 				bedtimeString = bedtimeString + "\n      TV still on"
+                        else:
+                            if bedtimeDebug:
+                                print "Maybe went to bed but not in bedroom at", nicetime(latestOne["time"]/1000), "from", latestOne["name"],\
+				    "delayMins=",(pt["time"] - latestOne["time"])/1000/60 
 		    elif bedtimeDebug:
 		    	print nicetime(pt["time"]/1000), "I/O=", INOUT, "doorstate:", state, "not gone to bed at", nicetime(latestOne["time"]/1000), "cause delay mins = ", (pt["time"] - latestOne["time"])/1000/60
+
         # wanders
         if inBed:
 	    bStr = "bedtime"
