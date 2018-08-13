@@ -1335,7 +1335,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
     #strDiff = _unidiff_output(doorString2, doorString3)
     #print "Diffs:", strDiff
 
-    Text = Text + uptimeString + teleString + kettleString + toasterString + microString + washerString + ovenString + cookerString + showerString + bedtimeString + wstr + busyString + doorString3 + "\n"
+    #Text = Text + uptimeString + teleString + kettleString + toasterString + microString + washerString + ovenString + cookerString + showerString + bedtimeString + wstr + busyString + doorString3 + "\n"
+    Text = Text + uptimeString + kettleString + toasterString + microString + washerString + ovenString + cookerString + showerString + bedtimeString + wstr + busyString + doorString3 + "\n"
 
     print "\n", Text 
 
