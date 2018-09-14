@@ -250,7 +250,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
     allSeries = []
 
     # useful stuff available to everything
-    bedtimeDebug = False
+    bedtimeDebug = True
     doorDebug = False
     if doors:
         doorDebug = True
@@ -897,6 +897,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
         #if (("bed" not in pt["name"].lower() and "binary" in pt["name"].lower() and pt["value"] == 1) try it including bedroom
         if (("binary" in pt["name"].lower() and pt["value"] == 1)
 	    or ("front" not in pt["name"].lower() and "binary" in pt["name"].lower() and "door" in pt["name"].lower() and pt["value"] == 1)):
+            #if uptimeDebug:
+            #    print nicetime(pt["time"]/1000), "New uptime point:", pt["name"], "INOUT=", INOUT
             if (pt["time"]/1000 > startTime 
                 and pt["time"]/1000 < startTime +6*oneHour # was 9
                 and not gotUp):
@@ -911,6 +913,11 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
                 else:
 		    last = upFifo[-1]
 		    first = upFifo.pop(0) # zero is correct!
+                    gotUpTime = pt["time"]
+                    upFifo.append(gotUpTime)
+                    if uptimeDebug:
+                        print nicetime(pt["time"]/1000), "Popped:", nicetime(first/1000)
+                        print nicetime(pt["time"]/1000), "And appended:", pt["name"], "INOUT=", INOUT
 		    #print "popped:", nicetime(first/1000)
                     #if uptimeDebug:
 		    #    for i in upFifo:
@@ -918,7 +925,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 		    #print "len:", len(upFifo), "last:", nicetime(last/1000), "popped last:", nicetime(first/1000)
 		    #print "last-first:", nicehours(last/1000), "-", nicehours(first/1000), "=", (last-first)/1000/60, "minutes"
 		    # For the general case (any bridge), this needs to depend on a history of aggregate activity. Not just 26mins
-		    if (last-first) <= 1000*oneMinute*26:
+		    if (last-first) <= 1000*oneMinute*30:
 			if uptimeDebug:
 			    print "Got up at", nicetime(gotUpTime/1000)
 			gotUp = True
@@ -942,7 +949,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 				print "*** Got up at:", nicetime(first/1000), "dt=", (last-first)/1000/60, "minutes"
 		    else:
                         if uptimeDebug:
-			    print "Rejecting:", nicetime(first/1000), "cause it's 10 items in", (last-first)/1000/60, "minutes (need 26mins)"
+			    print "    Rejecting:", nicetime(first/1000), "cause it's 10 items in", (last-first)/1000/60, "minutes (need 30mins)"
 
     #busyness - just count the ones 
     #for pt in allSeries: # main loop
@@ -984,7 +991,8 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 	    """
             latestOne = {} # it would be better to use now (pt) rather than clearing it but WFPIR doesn't 
                            # clear immediately so we can miss came_in and wemt straight to bed. See 2018-03-12
-	elif pt["time"] > (startTime + 14*oneHour)*1000 and pt["time"] < 1000*endTime and not inBed:
+        # changed from 20:00 to 19:30 temporarily for one service user
+	elif pt["time"] > (startTime + 13.5*oneHour)*1000 and pt["time"] < 1000*endTime and not inBed:
             if (("pir" in pt["name"].lower() or "movement" in pt["name"].lower())
 	        and "binary" in pt["name"].lower()
 	        # and "bedroom" not in pt["name"].lower() needed this when PIR could see the bed - now trying requiring bedroom occupancey
