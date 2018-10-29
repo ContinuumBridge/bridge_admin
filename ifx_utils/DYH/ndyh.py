@@ -791,7 +791,11 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 		    INOUT = "out"
 		    state = "WFDTC"
 		elif doorClosed:
-		    state = "ERROR"
+		    """ don't expect door to close as the first event
+                        so go round startup loop until something sensible happens
+                    """
+                    print nicetime(pt["time"]/1000), "********************** Door closed whilst waiting for it to open at start" 
+		    state = "WFDTO_U"
 	    elif state == "WFDTO":
 		if doorOpened:
 		    state = "WFDTC"
