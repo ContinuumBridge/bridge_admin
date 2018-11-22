@@ -567,8 +567,10 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 	if (("bathroom" in pt["name"].lower() or "shower" in pt["name"].lower())
 	    and "binary" in pt["name"].lower()
 	    and pt["value"] == 1): # reset occStart for every p 
-	    #if not occupied:
-	    #	print nicetime(pt["time"]/1000), "occStart set by:",  pt["name"] 
+            # note that the door can set occStart here. Leaving as is whilst the PIR's out of action
+            if showerDebug:
+	        if not occupied:
+	    	    print nicetime(pt["time"]/1000), "occStart set by:",  pt["name"] 
 	    if bathLuma>1:
 		if showerDebug:
                     print nicetime(pt["time"]/1000), "Bathroom occupied with light on - setting occStart to now"
