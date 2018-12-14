@@ -571,7 +571,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
             if showerDebug:
 	        if not occupied:
 	    	    print nicetime(pt["time"]/1000), "occStart set by:",  pt["name"] 
-	    if bathLuma>1:
+	    if True: # bathLuma>1: no good checking luma now - needs to be before
 		if showerDebug:
                     print nicetime(pt["time"]/1000), "Bathroom occupied with light on - setting occStart to now"
                 occupied = True
