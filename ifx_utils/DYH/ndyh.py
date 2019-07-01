@@ -250,7 +250,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
     allSeries = []
 
     # useful stuff available to everything
-    bedtimeDebug =  True
+    bedtimeDebug =   False
     doorDebug = False
     if doors:
         doorDebug = True
