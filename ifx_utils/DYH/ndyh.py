@@ -250,7 +250,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
     allSeries = []
 
     # useful stuff available to everything
-    bedtimeDebug = False
+    bedtimeDebug =  True
     doorDebug = False
     if doors:
         doorDebug = True
@@ -1017,7 +1017,7 @@ def dyh (user, password, bid, to, db, daysago, doors, mail, warning_mails, write
 			    print "Still up at:", nicetime(latestOne["time"]/1000), "in", latestOne["name"],\
 				"delayMins=",(pt["time"] - latestOne["time"])/1000/60 
 		    elif pt["time"] - latestOne["time"] > 1000*oneMinute*61:
-			if latestOne["inBedroom"] == 1:
+			if True: # latestOne["inBedroom"] == 1: temporary as we've lost bedroom sensor
                             if bedtimeDebug:
 			        print "Went to bed at:", nicetime(latestOne["time"]/1000), "from", latestOne["name"],\
 				    "delayMins=",(pt["time"] - latestOne["time"])/1000/60 
