@@ -4,4 +4,4 @@ date
 #date
 #./ndyh.py --bid BID264 --user bridges@continuumbridge.com --db Bridges --password Mucht00f@r --to "martin.sotheran@continuumbridge.com, jessica.hewitson@thedtgroup.org" --mail "y" --doors "" --shower_mail "" --writetoifx "y" --daysago 0
 ./ndyh.py --bid BID264 --user bridges@continuumbridge.com --db Bridges --password Mucht00f@r --to "martin.sotheran@continuumbridge.com" --mail "y" --doors "" --writetoifx "" --warning_mails "y" --daysago 0
-./ndyh.py --bid BID264 --user bridges@continuumbridge.com --db Bridges --password Mucht00f@r --to "Anna.Bayley@thedtgroup.org" --mail "y" --doors "" --writetoifx "" --warning_mails "" --daysago 0
+#./ndyh.py --bid BID264 --user bridges@continuumbridge.com --db Bridges --password Mucht00f@r --to "Anna.Bayley@thedtgroup.org" --mail "y" --doors "" --writetoifx "" --warning_mails "" --daysago 0
